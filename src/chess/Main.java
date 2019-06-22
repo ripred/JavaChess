@@ -145,6 +145,23 @@ class Main {
                 response = "";
                 continue;
             }
+
+            boolean isValid = false;
+            for (Move m:board.getCurrentPlayerMoves()) {
+                if (m.getFromCol() == col1
+                && m.getFromRow() == row1
+                && m.getToCol() == col2
+                && m.getToRow() == row2) {
+                    isValid = true;
+                    break;
+                }
+            }
+            if (!isValid) {
+                System.out.println("That is not a legal move.");
+                System.out.print(prompt);
+                response = "";
+                continue;
+            }
             break;
         }
         return move;
