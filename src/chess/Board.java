@@ -131,12 +131,12 @@ public class Board {
             // Show the pieces taken at the end of the first 2 rows:
             if (row == 0) {
                 System.out.print("   Black pieces taken: ");
-                for (int piece : piecesTaken0) {
+                for (int piece : piecesTaken1) {
                     System.out.print(charSetUnicodeWhite[piece] + " ");
                 }
             } else if (row == 1) {
                 System.out.print("   White pieces taken: ");
-                for (int piece : piecesTaken1) {
+                for (int piece : piecesTaken0) {
                     System.out.print(charSetUnicodeBlack[piece] + " ");
                 }
             }
