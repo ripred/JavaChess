@@ -75,15 +75,26 @@ class Main {
 
         System.out.print(prompt);
         while (true) {
-            try {
-                if (System.in.available() > 0) {
-                    int c = System.in.read();
-                    if (c == -1 || c == '\n' || c == '\r')
-                        break;
-                    response += (char) c;
+            while (true) {
+                try {
+                    if (System.in.available() > 0) {
+                        int c = System.in.read();
+                        if (c == -1 || c == '\n' || c == '\r')
+                            break;
+                        if (c == '\b') {    // backspace
+                            if (response.length() > 1) {
+                                response = response.substring(0, response.length() - 1);
+                                continue;
+                            }
+                        }
+                        response += (char) c;
+                        continue;
+                    } else {
+                        continue;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
 
             if (response.length() < 5) {
