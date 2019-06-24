@@ -49,7 +49,12 @@ public class Board {
         verbose = ref.verbose;
         turn = ref.turn;
         passes = ref.passes;
-        currentPlayerMoves = ref.currentPlayerMoves;
+        if (ref.currentPlayerMoves == null) {
+            currentPlayerMoves = null;
+        } else {
+            currentPlayerMoves = new ArrayList<>(ref.currentPlayerMoves.size());
+            currentPlayerMoves.addAll(ref.currentPlayerMoves);
+        }
         piecesTaken0 = new ArrayList<>();
         piecesTaken0.addAll(ref.piecesTaken0);
         piecesTaken1 = new ArrayList<>();
