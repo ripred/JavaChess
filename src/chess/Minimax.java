@@ -174,7 +174,7 @@ public class Minimax implements AIMoveSelector {
             else
                 beta = Integer.min(beta, currentValue);
 
-            if (alpha > beta) {
+            if (alpha >= beta) {
                 break;
             }
         }
