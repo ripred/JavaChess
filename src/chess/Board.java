@@ -419,8 +419,6 @@ public class Board {
         return moves;
     }
 
-    private static boolean inCleanup = false;
-
     /**
      * Take a list of moves and create a new list that does not contain
      * any moves that would place the specified side in check.
@@ -429,10 +427,6 @@ public class Board {
      * @return A new List<Move> that does not include any moves that would place the current player in check.
      */
     private List<Move> cleanupMoves(final List<Move> moves, final int side) {
-        if (inCleanup)
-            return moves;
-        inCleanup = true;
-
         List<Move> valid = new ArrayList<>();
         for (Move m:moves) {
             Board current = new Board(this);
@@ -441,7 +435,6 @@ public class Board {
                 valid.add(m);
             }
         }
-        inCleanup = false;
         return valid;
     }
 
