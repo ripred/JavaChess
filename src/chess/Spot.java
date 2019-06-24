@@ -45,4 +45,9 @@ public class Spot {
     void setRow(int n)          { row = n; }
     void setMoved(boolean b)    { moved = b; }
     void setEmpty()             { type = Piece.Empty; }
+
+    @Override
+    public String toString() {
+        return String.format("[Spot side:%d type:%d col:%d row:%d mvd:%d", side, type, col, row, moved ? 1:0);
+    }
 }

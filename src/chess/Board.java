@@ -214,15 +214,15 @@ public class Board {
     }
 
     /**
-     * Alternating Pawns vs Alternating Pawns
+     * Test board
      */
-    void initTest7() {
+    void initTest() {
         initBoardArray();
 
-        for (int col=0; col <= 7; col +=2) {
-            putPiece(Piece.Pawn, Side.Black, col, 1);
-            putPiece(Piece.Pawn, Side.White, col + 1, 6);
-        }
+        putPiece(Piece.King,  Side.Black, 4, 0);
+
+        putPiece(Piece.Queen, Side.White, 2, 6);
+        putPiece(Piece.Rook,  Side.White, 7, 6);
 
         turn = Side.White;
         currentPlayerMoves = getMovesSorted(turn);
@@ -329,7 +329,6 @@ public class Board {
         return currentPlayerMoves;
     }
 
-
     /**
      * Checks the board state to see if the specified side is in check
      *
@@ -338,17 +337,18 @@ public class Board {
      * @return true if the current player is in check otherwise false.
      */
     boolean kingInCheck(final Board board, final int side) {
-        int otherSide = (side == Side.Black) ? Side.White : Side.Black;
+        int otherSide = (side == Side.White) ? Side.Black : Side.White;
         List<Move> opponentMoves = board.getMoves(otherSide, false);
+
         for (Spot s : board.getBoard()) {
-            if (s.isEmpty()
-                    || s.getSide() != side
-                    || s.getType() != Piece.King) continue;
+            if (s.getType() != Piece.King || s.getSide() != side || s.isEmpty()) continue;
+
             for (Move m : opponentMoves) {
                 if (m.getToCol() == s.getCol() && m.getToRow() == s.getRow()) {
                     return true;
                 }
             }
+            break;
         }
         return false;
     }

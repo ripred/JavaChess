@@ -25,8 +25,8 @@ public class Minimax implements AIMoveSelector {
 
         // instantiate a BoardEvaluator object to get an identity function for the board state
 //        evaluator = new TotalMoveCounts();
-        evaluator = new PieceValuesPlusPos();
-//        evaluator = new TotalPieceValues();
+//        evaluator = new PieceValuesPlusPos();
+        evaluator = new TotalPieceValues();
     }
 
     @Override
@@ -47,9 +47,10 @@ public class Minimax implements AIMoveSelector {
      */
     @Override
     public Move bestMove(final Board board) {
-        int lowest = Integer.MAX_VALUE/2;
-        int highest = Integer.MIN_VALUE/2;
+        int lowest = Piece.MAX_VALUE;
+        int highest = Piece.MIN_VALUE;
         final int side = board.getTurn();
+        final boolean maximizing = side == Side.Black;
         int depth = startDepth;
         stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
         boolean gameEndFound = false;
@@ -68,9 +69,9 @@ public class Minimax implements AIMoveSelector {
         List<Object> results = new ArrayList<>();
         Object resultsLock = new Object();
 
-        for (Move m:board.getCurrentPlayerMoves()) {
+        for (Move move:board.getCurrentPlayerMoves()) {
             Board currentBoard = new Board(board);
-            currentBoard.executeMove(m);
+            currentBoard.executeMove(move);
             currentBoard.advanceTurn();
             synchronized (processedLock) {
                 ++movesProcessed;
@@ -79,7 +80,7 @@ public class Minimax implements AIMoveSelector {
             // See if that move leaves the other player with no moves and return it if so:
             if (currentBoard.getCurrentPlayerMoves().isEmpty()) {
                 gameEndFound = true;
-                bestMove = m;
+                bestMove = move;
                 break;
             }
 
@@ -88,15 +89,13 @@ public class Minimax implements AIMoveSelector {
                 break;
             }
 
-            boolean maximizing = side != Side.Black;
-
             Thread t = new Thread(() -> {
                 int currentValue = minmax(
-                        currentBoard, Integer.MIN_VALUE/2, Integer.MAX_VALUE/2, depth - 1, maximizing);
+                        currentBoard, Piece.MIN_VALUE, Piece.MAX_VALUE, depth - 1, maximizing);
 
                 synchronized (resultsLock) {
                     results.add(currentValue);
-                    results.add(m);
+                    results.add(move);
                 }
             });
             threads.add(t);
@@ -134,12 +133,11 @@ public class Minimax implements AIMoveSelector {
     }
 
     private int minmax(final Board board, int alpha, int beta, final int depth, final boolean maximizing) {
-
         if (depth <= 0) {
             return evaluator.evaluate(board);
         }
 
-        int lowestOrHighest = maximizing ? Integer.MIN_VALUE/2 : Integer.MAX_VALUE/2;
+        int lowestOrHighest = maximizing ? Piece.MIN_VALUE : Piece.MAX_VALUE;
         for (final Move m:board.getCurrentPlayerMoves()) {
             Board currentBoard = new Board(board);
             currentBoard.executeMove(m);
@@ -155,9 +153,9 @@ public class Minimax implements AIMoveSelector {
             // no moves and return the best value possible if so:
             if (currentBoard.getCurrentPlayerMoves().size() == 0) {
                 if (maximizing)
-                    lowestOrHighest = (Integer.MAX_VALUE/2) - (100 - depth);
+                    lowestOrHighest = Piece.MAX_VALUE - (100 - depth);
                 else
-                    lowestOrHighest = (Integer.MIN_VALUE/2) + (100 - depth);
+                    lowestOrHighest = Piece.MIN_VALUE + (100 - depth);
                 break;
             }
 
@@ -171,7 +169,7 @@ public class Minimax implements AIMoveSelector {
                 lowestOrHighest = currentValue;
             }
 
-            if (!maximizing)
+            if (maximizing)
                 alpha = Integer.max(alpha, currentValue);
             else
                 beta = Integer.min(beta, currentValue);

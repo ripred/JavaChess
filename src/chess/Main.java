@@ -133,13 +133,13 @@ class Main {
 
         boolean isHuman = false;
 
-//        board.initTest7();
+        board.initTest();
 
         print();
         board.show();
 
         int pass = 1;
-        final int depth = 8;
+        final int depth = 6;
         final int maxSeconds = 7 * 60;
 
         AIMoveSelector moveAgent = new Minimax(depth, maxSeconds);
