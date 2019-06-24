@@ -17,8 +17,6 @@ public class Board {
     private int turn;
     private int passes;
 
-    static long timeInGetMoves;
-
     /**
      * The default constructor for a Board object.
      *
@@ -26,7 +24,6 @@ public class Board {
      */
     Board() {
         verbose = 0;
-        timeInGetMoves = 0L;
         init();
     }
 
@@ -209,7 +206,6 @@ public class Board {
         putPiece(Piece.Rook,   Side.White, 7, 7);
 
         turn = Side.White;
-        timeInGetMoves = 0L;
 
         piecesTaken0 = new ArrayList<>();
         piecesTaken1 = new ArrayList<>();
@@ -228,7 +224,6 @@ public class Board {
         putPiece(Piece.Queen,  Side.White, 4, 4);
 
         turn = Side.White;
-        timeInGetMoves = 0L;
         currentPlayerMoves = getMovesSorted(turn);
     }
 
@@ -242,7 +237,6 @@ public class Board {
         putPiece(Piece.Queen,  Side.White, 4, 4);
 
         turn = Side.White;
-        timeInGetMoves = 0L;
         currentPlayerMoves = getMovesSorted(turn);
     }
 
@@ -257,7 +251,6 @@ public class Board {
         putPiece(Piece.Queen,  Side.White, 6, 5);
 
         turn = Side.White;
-        timeInGetMoves = 0L;
         currentPlayerMoves = getMovesSorted(turn);
     }
 
@@ -271,7 +264,6 @@ public class Board {
         putPiece(Piece.Queen,  Side.White, 6, 5);
 
         turn = Side.White;
-        timeInGetMoves = 0L;
         currentPlayerMoves = getMovesSorted(turn);
     }
 
@@ -288,7 +280,6 @@ public class Board {
         getSpot(4, 5).setMoved(true);
 
         turn = Side.White;
-        timeInGetMoves = 0L;
         currentPlayerMoves = getMovesSorted(turn);
     }
 
@@ -304,7 +295,6 @@ public class Board {
         putPiece(Piece.Queen,   Side.White, 3, 7);
 
         turn = Side.White;
-        timeInGetMoves = 0L;
         currentPlayerMoves = getMovesSorted(turn);
     }
 
@@ -320,7 +310,6 @@ public class Board {
         }
 
         turn = Side.White;
-        timeInGetMoves = 0L;
         currentPlayerMoves = getMovesSorted(turn);
     }
 
@@ -333,21 +322,6 @@ public class Board {
      */
     private static boolean isValidSpot(final int col, final int row) {
         return col >= 0 && col <= 7 && row >= 0 && row <= 7;
-    }
-
-    /**
-     * Display a list of moves to the console.
-     *
-     * @param name The name of the piece to be used in the output message
-     * @param col The column to be displayed in the output message
-     * @param row The row to be displayed in the output message
-     * @param moves The list of moves to be displayed to the output
-     */
-    private void showMoves(final String name, final int col, final int row, final List<Move> moves) {
-        System.out.println(String.format("%s@%d,%d moves: %d", name, col, row, moves.size()));
-        for (Move m:moves) {
-            System.out.println(String.format("    %s", m));
-        }
     }
 
     /**
@@ -385,9 +359,9 @@ public class Board {
         // If a piece is being captured then add it to the list:
         if (board.get(ti).getType() != Piece.Empty) {
             if (board.get(ti).getSide() == Side.Black) {
-                piecesTaken1.add(board.get(ti).getType());
-            } else {
                 piecesTaken0.add(board.get(ti).getType());
+            } else {
+                piecesTaken1.add(board.get(ti).getType());
             }
         }
 
@@ -399,28 +373,26 @@ public class Board {
 
         // See if this is a Castling move:
         if (board.get(ti).getType() == Piece.King) {
+            // get the number of columns being moved. Only castling moves 2 column positions
             int delta = tx - fx;
-            if (delta == 2 || delta == -2) {
-                // castling:
+            if (abs(delta) == 2) {
+                // This is a castling move so we need to move to rook as well:
+                int rfi;    // Rook from index
+                int rti;    // Rook to index
                 if (delta < 0) {
-                    // castling on queen's side. Also move the rook:
-                    int rfi = fy * 8;       // rook from-index
-                    int rti = fy * 8 + 3;   // rook to-index
-                    board.set(rti, board.get(rfi));
-                    board.get(rti).setCol(3);
-                    board.get(rti).setRow(fy);
-                    board.get(rti).setMoved(true);
-                    board.set(rfi, new Spot(Side.Black, Piece.Empty, rfi % 8, rfi / 8));
+                    // castling is on queen's side.
+                    rfi = fy * 8;       // rook from-index
+                    rti = fy * 8 + 3;   // rook to-index
                 } else {
-                    // castling on king's side. Also move the rook:
-                    int rfi = fy * 8 + 7;   // rook from-index
-                    int rti = fy * 8 + 5;   // rook to-index
-                    board.set(rti, board.get(rfi));
-                    board.get(rti).setCol(5);
-                    board.get(rti).setRow(fy);
-                    board.get(rti).setMoved(true);
-                    board.set(rfi, new Spot(Side.Black, Piece.Empty, rfi % 8, rfi / 8));
+                    // castling is on king's side
+                    rfi = fy * 8 + 7;   // rook from-index
+                    rti = fy * 8 + 5;   // rook to-index
                 }
+                board.set(rti, board.get(rfi));
+                board.get(rti).setCol(rti % 8);
+                board.get(rti).setRow(fy);
+                board.get(rti).setMoved(true);
+                board.set(rfi, new Spot(Side.Black, Piece.Empty, rfi % 8, rfi / 8));
             }
         } else if (board.get(ti).getType() == Piece.Pawn) {
             if (ty == 0 || ty == 7) {
@@ -442,6 +414,7 @@ public class Board {
         return currentPlayerMoves;
     }
 
+
     /**
      * Checks the board state to see if the specified side is in check
      *
@@ -451,12 +424,12 @@ public class Board {
      */
     boolean kingInCheck(final Board board, final int side) {
         int otherSide = (side == Side.Black) ? Side.White : Side.Black;
-        List<Move> opponentMoves = board.getMoves(otherSide);
-        for (Spot s:board.getBoard()) {
+        List<Move> opponentMoves = board.getMoves(otherSide, false);
+        for (Spot s : board.getBoard()) {
             if (s.isEmpty()
-                || s.getSide() != side
-                || s.getType() != Piece.King) continue;
-            for (Move m:opponentMoves) {
+                    || s.getSide() != side
+                    || s.getType() != Piece.King) continue;
+            for (Move m : opponentMoves) {
                 if (m.getToCol() == s.getCol() && m.getToRow() == s.getRow()) {
                     return true;
                 }
@@ -471,7 +444,7 @@ public class Board {
      * @param side The side to get all available moves for
      * @return Returns a new List<Move> of all possible moves for the specified side
      */
-    List<Move> getMoves(final int side) {
+    List<Move> getMoves(final int side, final boolean checkKing) {
         final long startTime = System.nanoTime();
         final List<Move> moves = new ArrayList<>();
         List<Move> pMoves;
@@ -485,138 +458,36 @@ public class Board {
             switch (spot.getType()) {
                 case Piece.Pawn:
                     pMoves = getPawnMoves(col, row);
-//                    if (verbose == 1) showMoves("Pawn", col, row, pMoves);
                     moves.addAll(pMoves);
                     break;
                 case Piece.Rook:
                     pMoves = getRookMoves(col, row);
-//                    if (verbose == 1) showMoves("Rook", col, row, pMoves);
                     moves.addAll(pMoves);
                     break;
                 case Piece.Knight:
                     pMoves = getKnightMoves(col, row);
-//                    if (verbose == 1) showMoves("Knight", col, row, pMoves);
                     moves.addAll(pMoves);
                     break;
                 case Piece.Bishop:
                     pMoves = getBishopMoves(col, row);
-//                    if (verbose == 1) showMoves("Bishop", col, row, pMoves);
                     moves.addAll(pMoves);
                     break;
                 case Piece.Queen:
                     pMoves = getQueenMoves(col, row);
-//                    if (verbose == 1) showMoves("Queen", col, row, pMoves);
                     moves.addAll(pMoves);
                     break;
                 case Piece.King:
                     pMoves = getKingMoves(col, row);
-//                    if (verbose == 1) showMoves("King", col, row, pMoves);
                     moves.addAll(pMoves);
                     break;
             }
         }
 
-        timeInGetMoves += (System.nanoTime() - startTime) / 1000;
-
-        return cleanupMoves(moves, side);
-    }
-
-    List<Move> getMovesNonParallel(final int side) {
-        return null;
-    }
-
-    List<Move> getMovesParallel(final int side) {
-        final long startTime = System.nanoTime();
-        final List<Move> moves = new ArrayList<>();
-        final List<Thread> threads = new ArrayList<>();
-        Thread t;
-
-        for (Spot spot : board) {
-            if (spot.isEmpty() || spot.getSide() != side) {
-                continue;
-            }
-            int col = spot.getCol();
-            int row = spot.getRow();
-            switch (spot.getType()) {
-                case Piece.Pawn:
-                    t = new Thread(() -> {
-                        List<Move> pMoves = getPawnMoves(col, row);
-//                        if (verbose == 1) showMoves("Pawn", col, row, pMoves);
-                        synchronized (moves) {
-                            moves.addAll(pMoves);
-                        }
-                    });
-                    t.start();
-                    threads.add(t);
-                    break;
-                case Piece.Rook:
-                    t = new Thread(() -> {
-                        List<Move> pMoves = getRookMoves(col, row);
-//                        if (verbose == 1) showMoves("Rook", col, row, pMoves);
-                        synchronized (moves) {
-                            moves.addAll(pMoves);
-                        }
-                    });
-                    threads.add(t);
-                    break;
-                case Piece.Knight:
-                    t = new Thread(() -> {
-                        List<Move> pMoves = getKnightMoves(col, row);
-//                        if (verbose == 1) showMoves("Knight", col, row, pMoves);
-                        synchronized (moves) {
-                            moves.addAll(pMoves);
-                        }
-                    });
-                    t.start();
-                    threads.add(t);
-                    break;
-                case Piece.Bishop:
-                    t = new Thread(() -> {
-                        List<Move> pMoves = getBishopMoves(col, row);
-//                        if (verbose == 1) showMoves("Bishop", col, row, pMoves);
-                        synchronized (moves) {
-                            moves.addAll(pMoves);
-                        }
-                    });
-                    t.start();
-                    threads.add(t);
-                    break;
-                case Piece.Queen:
-                    t = new Thread(() -> {
-                        List<Move> pMoves = getQueenMoves(col, row);
-//                        if (verbose == 1) showMoves("Queen", col, row, pMoves);
-                        synchronized (moves) {
-                            moves.addAll(pMoves);
-                        }
-                    });
-                    t.start();
-                    threads.add(t);
-                    break;
-                case Piece.King:
-                    t = new Thread(() -> {
-                        List<Move> pMoves = getKingMoves(col, row);
-//                        if (verbose == 1) showMoves("King", col, row, pMoves);
-                        synchronized (moves) {
-                            moves.addAll(pMoves);
-                        }
-                    });
-                    t.start();
-                    threads.add(t);
-                    break;
-            }
+        if (checkKing) {
+            return cleanupMoves(moves, side);
+        } else {
+            return moves;
         }
-
-        try {
-            for (Thread thread:threads) {
-                thread.join();
-            }
-        } catch (InterruptedException e) {
-            System.out.println("InterruptedException in getMoves(): " + e.getMessage());
-        }
-
-        timeInGetMoves += (System.nanoTime() - startTime) / 1000;
-
-        return cleanupMoves(moves, side);
     }
 
     /**
@@ -628,7 +499,7 @@ public class Board {
      */
     List<Move> getMovesSorted(final int side) {
         Comparator<Move> sortByValue = Comparator.comparing(Move::getValue).reversed();
-        List<Move> moves = getMoves(side);
+        List<Move> moves = getMoves(side, true);
         moves.sort(sortByValue);
         return moves;
     }
