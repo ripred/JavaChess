@@ -1,7 +1,5 @@
 package chess;
 
-import java.util.List;
-
 class Main {
 
     private static void print() {
@@ -71,7 +69,6 @@ class Main {
     private static Move getHumanMove(final Board board) {
         String prompt = "Enter your move (ex: a2 a3): ";
         String response = "";
-        Move move = null;
 
         System.out.print(prompt);
         while (true) {
@@ -118,60 +115,23 @@ class Main {
             int row1 = 8 - Integer.valueOf(parts[0].substring(1));
             int row2 = 8 - Integer.valueOf(parts[1].substring(1));
 
-            if (col1 < 0 || col1 > 7 || row1 < 0 || row2 > 7) {
-                System.out.println("Invalid response.");
-                System.out.print(prompt);
-                response = "";
-                continue;
-            }
-
-            if (board.getSpot(col1, row1).isEmpty()) {
-                System.out.println("There is no piece to move at " + response);
-                System.out.print(prompt);
-                response = "";
-                continue;
-            }
-
-            int value = board.getSpot(row2, col2).getType();
-            move = new Move(col1, row1, col2, row2, value);
-
-            // Make sure it is a legal move
-            Board test = new Board(board);
-            int mySide = board.getTurn();
-            test.executeMove(move);
-            if (board.kingInCheck(test, mySide)) {
-                System.out.println("That move would put your king in check!");
-                System.out.print(prompt);
-                response = "";
-                continue;
-            }
-
-            boolean isValid = false;
             for (Move m:board.getCurrentPlayerMoves()) {
-                if (m.getFromCol() == col1
-                && m.getFromRow() == row1
-                && m.getToCol() == col2
-                && m.getToRow() == row2) {
-                    isValid = true;
-                    break;
+                if (m.getFromCol() == col1 && m.getFromRow() == row1
+                    && m.getToCol() == col2 && m.getToRow() == row2) {
+                    return new Move(col1, row1, col2, row2, 0);
                 }
             }
-            if (!isValid) {
-                System.out.println("That is not a legal move.");
-                System.out.print(prompt);
-                response = "";
-                continue;
-            }
-            break;
+            System.out.println("That is not a legal move.");
+            System.out.print(prompt);
+            response = "";
         }
-        return move;
     }
 
 
     public static void main(String[] args) {
         Board board = new Board(1);
 
-        boolean isHuman = true;
+        boolean isHuman = false;
 
 //        board.initTest7();
 
@@ -179,8 +139,8 @@ class Main {
         board.show();
 
         int pass = 1;
-        final int depth = 9;
-        final int maxSeconds = 5 * 60;
+        final int depth = 8;
+        final int maxSeconds = 7 * 60;
 
         AIMoveSelector moveAgent = new Minimax(depth, maxSeconds);
 
@@ -228,8 +188,8 @@ class Main {
 
         boolean checkMateBlack = board.kingInCheck(board, 0);
         boolean checkMateWhite = board.kingInCheck(board, 1);
-        int numMoveBlack = board.getMoves(0).size();
-        int numMoveWhite = board.getMoves(1).size();
+        int numMoveBlack = board.getMoves(0, true).size();
+        int numMoveWhite = board.getMoves(1, true).size();
 
         assert numMoveBlack > 0 || numMoveWhite > 0 : "Internal error: Both players have 0 moves";
         assert checkMateBlack   && checkMateWhite   : "Internal error: Both players are in check";
@@ -249,9 +209,6 @@ class Main {
                 print("Stalemate!  White Wins!");
             }
         }
-
-        print(String.format("%nTotal time in getMoves() = %,d microseconds", Board.timeInGetMoves));
-        Board.timeInGetMoves = 0L;
 
         print();
 
