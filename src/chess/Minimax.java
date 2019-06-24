@@ -52,6 +52,7 @@ public class Minimax implements AIMoveSelector {
         final int side = board.getTurn();
         int depth = startDepth;
         stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
+        boolean gameEndFound = false;
         Move bestMove = null;
 
         if (board.getCurrentPlayerMoves().size() == 1) {
@@ -77,6 +78,7 @@ public class Minimax implements AIMoveSelector {
 
             // See if that move leaves the other player with no moves and return it if so:
             if (currentBoard.getCurrentPlayerMoves().isEmpty()) {
+                gameEndFound = true;
                 bestMove = m;
                 break;
             }
@@ -109,24 +111,25 @@ public class Minimax implements AIMoveSelector {
             }
         }
 
-        synchronized (resultsLock) {
-            while (!results.isEmpty()) {
-                int value = ((int) results.remove(0));
-                Move move = ((Move) results.remove(0));
-                if (side == Side.White) {
-                    if (value >= highest) {
-                        highest = value;
-                        bestMove = move;
-                    }
-                } else {
-                    if (value <= lowest) {
-                        lowest = value;
-                        bestMove = move;
+        if (!gameEndFound) {
+            synchronized (resultsLock) {
+                while (!results.isEmpty()) {
+                    int value = ((int) results.remove(0));
+                    Move move = ((Move) results.remove(0));
+                    if (side == Side.White) {
+                        if (value >= highest) {
+                            highest = value;
+                            bestMove = move;
+                        }
+                    } else {
+                        if (value <= lowest) {
+                            lowest = value;
+                            bestMove = move;
+                        }
                     }
                 }
             }
         }
-
         return bestMove;
     }
 
