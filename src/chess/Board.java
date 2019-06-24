@@ -97,9 +97,9 @@ public class Board {
      *
      */
     void show() {
-        String[] charSetAscii = {"p","k","b","r","q","k"};
-        String[] charSetUnicodeWhite = {"♟","♞","♝","♜","♛","♚"};
-        String[] charSetUnicodeBlack = {"♙","♘","♗","♖","♕","♔"};
+        String[] charSetAscii = {"?","p","k","b","r","q","k"};
+        String[] charSetUnicodeWhite = {"?","♟","♞","♝","♜","♛","♚"};
+        String[] charSetUnicodeBlack = {"?","♙","♘","♗","♖","♕","♔"};
         final boolean useUnicode = true;
 
         for (int row=0; row <= 7; ++row) {

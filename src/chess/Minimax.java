@@ -25,8 +25,8 @@ public class Minimax implements AIMoveSelector {
 
         // instantiate a BoardEvaluator object to get an identity function for the board state
 //        evaluator = new TotalMoveCounts();
-//        evaluator = new PieceValuesPlusPos();
-        evaluator = new TotalPieceValues();
+        evaluator = new PieceValuesPlusPos();
+//        evaluator = new TotalPieceValues();
     }
 
     @Override
@@ -47,11 +47,10 @@ public class Minimax implements AIMoveSelector {
      */
     @Override
     public Move bestMove(final Board board) {
-        int lowest = Integer.MAX_VALUE;
-        int highest = Integer.MIN_VALUE;
+        int lowest = Integer.MAX_VALUE/2;
+        int highest = Integer.MIN_VALUE/2;
         final int side = board.getTurn();
         int depth = startDepth;
-        boolean endMoveFound = false;
         stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
         Move bestMove = null;
 
@@ -68,9 +67,9 @@ public class Minimax implements AIMoveSelector {
         List<Object> results = new ArrayList<>();
         Object resultsLock = new Object();
 
-        for (Move move:board.getCurrentPlayerMoves()) {
+        for (Move m:board.getCurrentPlayerMoves()) {
             Board currentBoard = new Board(board);
-            currentBoard.executeMove(move);
+            currentBoard.executeMove(m);
             currentBoard.advanceTurn();
             synchronized (processedLock) {
                 ++movesProcessed;
@@ -78,8 +77,7 @@ public class Minimax implements AIMoveSelector {
 
             // See if that move leaves the other player with no moves and return it if so:
             if (currentBoard.getCurrentPlayerMoves().isEmpty()) {
-                endMoveFound = true;
-                bestMove = move;
+                bestMove = m;
                 break;
             }
 
@@ -91,12 +89,12 @@ public class Minimax implements AIMoveSelector {
             boolean maximizing = side != Side.Black;
 
             Thread t = new Thread(() -> {
-                int value = minmax(
-                    currentBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, depth - 1, maximizing);
+                int currentValue = minmax(
+                        currentBoard, Integer.MIN_VALUE/2, Integer.MAX_VALUE/2, depth - 1, maximizing);
 
                 synchronized (resultsLock) {
-                    results.add(value);
-                    results.add(move);
+                    results.add(currentValue);
+                    results.add(m);
                 }
             });
             threads.add(t);
@@ -111,25 +109,24 @@ public class Minimax implements AIMoveSelector {
             }
         }
 
-        if (!endMoveFound) {
-            synchronized (resultsLock) {
-                while (!results.isEmpty()) {
-                    int value = ((int) results.remove(0));
-                    Move move = ((Move) results.remove(0));
-                    if (side == Side.White) {
-                        if (value >= highest) {
-                            highest = value;
-                            bestMove = move;
-                        }
-                    } else {
-                        if (value <= lowest) {
-                            lowest = value;
-                            bestMove = move;
-                        }
+        synchronized (resultsLock) {
+            while (!results.isEmpty()) {
+                int value = ((int) results.remove(0));
+                Move move = ((Move) results.remove(0));
+                if (side == Side.White) {
+                    if (value >= highest) {
+                        highest = value;
+                        bestMove = move;
+                    }
+                } else {
+                    if (value <= lowest) {
+                        lowest = value;
+                        bestMove = move;
                     }
                 }
             }
         }
+
         return bestMove;
     }
 
@@ -139,7 +136,7 @@ public class Minimax implements AIMoveSelector {
             return evaluator.evaluate(board);
         }
 
-        int lowestOrHighest = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+        int lowestOrHighest = maximizing ? Integer.MIN_VALUE/2 : Integer.MAX_VALUE/2;
         for (final Move m:board.getCurrentPlayerMoves()) {
             Board currentBoard = new Board(board);
             currentBoard.executeMove(m);
@@ -155,9 +152,9 @@ public class Minimax implements AIMoveSelector {
             // no moves and return the best value possible if so:
             if (currentBoard.getCurrentPlayerMoves().size() == 0) {
                 if (maximizing)
-                    lowestOrHighest = Integer.MAX_VALUE - (100 - depth);
+                    lowestOrHighest = (Integer.MAX_VALUE/2) - (100 - depth);
                 else
-                    lowestOrHighest = Integer.MIN_VALUE + (100 - depth);
+                    lowestOrHighest = (Integer.MIN_VALUE/2) + (100 - depth);
                 break;
             }
 

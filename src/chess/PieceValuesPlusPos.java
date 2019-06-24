@@ -33,7 +33,7 @@ public class PieceValuesPlusPos implements BoardEvaluator {
             if (spot.getSide() == Side.Black)
                 value -= (dx + dy) * spot.getType() * 10;
             else
-                value += (dx + dy) * spot.getType() + 10;
+                value += (dx + dy) * spot.getType() * 10;
         }
         return value;
     }
