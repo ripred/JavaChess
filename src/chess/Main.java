@@ -1,5 +1,7 @@
 package chess;
 
+import java.util.Scanner;
+
 class Main {
 
     private static void print() {
@@ -43,9 +45,9 @@ class Main {
 
         if (isCastle) {
             if (from.getCol() == 4) {
-                print("Castle on queen's side");
-            } else {
                 print("Castle on king's side");
+            } else {
+                print("Castle on queen's side");
             }
         } else {
             print(String.format("%s from %c%d to %c%d %s",
@@ -70,43 +72,21 @@ class Main {
         String prompt = "Enter your move (ex: a2 a3): ";
         String response = "";
 
-        System.out.print(prompt);
+
         while (true) {
-            while (true) {
-                try {
-                    if (System.in.available() > 0) {
-                        int c = System.in.read();
-                        if (c == -1 || c == '\n' || c == '\r')
-                            break;
-                        if (c == '\b') {    // backspace
-                            if (response.length() > 1) {
-                                response = response.substring(0, response.length() - 1);
-                                continue;
-                            }
-                        }
-                        response += (char) c;
-                        continue;
-                    } else {
-                        continue;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+            System.out.print(prompt);
+            Scanner input = new Scanner(System.in);
+            response = input.nextLine();
 
             if (response.length() < 5) {
-                System.out.println("Invalid response.");
-                System.out.print(prompt);
-                response = "";
+                System.out.println("Invalid format.");
                 continue;
             }
 
             response = response.toLowerCase();
             String[] parts = response.split(" ");
             if (parts.length < 2) {
-                System.out.println("Invalid response.");
-                System.out.print(prompt);
-                response = "";
+                System.out.println("Invalid format.");
                 continue;
             }
 
@@ -118,29 +98,29 @@ class Main {
             for (Move m:board.getCurrentPlayerMoves()) {
                 if (m.getFromCol() == col1 && m.getFromRow() == row1
                     && m.getToCol() == col2 && m.getToRow() == row2) {
-                    return new Move(col1, row1, col2, row2, 0);
+                    Spot spot = board.getSpot(col2, row2);
+                    int value = spot.isEmpty() ? 0 : Piece.values[spot.getType()];
+                    return new Move(col1, row1, col2, row2, value);
                 }
             }
             System.out.println("That is not a legal move.");
-            System.out.print(prompt);
-            response = "";
         }
     }
-
 
     public static void main(String[] args) {
         Board board = new Board(1);
 
-        boolean isHuman = false;
+        boolean isHuman = true;
+        int humanSide = Side.White;
 
-        board.initTest();
+//        board.initTest();
 
         print();
         board.show();
 
         int pass = 1;
-        final int depth = 6;
-        final int maxSeconds = 7 * 60;
+        final int depth = 8;
+        final int maxSeconds = 10 * 60;
 
         AIMoveSelector moveAgent = new Minimax(depth, maxSeconds);
 
@@ -149,7 +129,7 @@ class Main {
         long startTime = System.nanoTime();
         Move move = null;
 
-        if (isHuman && board.getTurn() == Side.White) {
+        if (isHuman && board.getTurn() == humanSide) {
             move = getHumanMove(board);
         } else {
             move = moveAgent.bestMove(board);
@@ -179,7 +159,7 @@ class Main {
             showTurnPrompt(board, pass);
 
             startTime = System.nanoTime();
-            if (isHuman && board.getTurn() == Side.White) {
+            if (isHuman && board.getTurn() == humanSide) {
                 move = getHumanMove(board);
             } else {
                 move = moveAgent.bestMove(board);
