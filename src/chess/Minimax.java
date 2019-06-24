@@ -51,6 +51,7 @@ public class Minimax implements AIMoveSelector {
         int highest = Integer.MIN_VALUE;
         final int side = board.getTurn();
         int depth = startDepth;
+        boolean endMoveFound = false;
         stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
         Move bestMove = null;
 
@@ -67,9 +68,9 @@ public class Minimax implements AIMoveSelector {
         List<Object> results = new ArrayList<>();
         Object resultsLock = new Object();
 
-        for (Move m:board.getCurrentPlayerMoves()) {
+        for (Move move:board.getCurrentPlayerMoves()) {
             Board currentBoard = new Board(board);
-            currentBoard.executeMove(m);
+            currentBoard.executeMove(move);
             currentBoard.advanceTurn();
             synchronized (processedLock) {
                 ++movesProcessed;
@@ -77,7 +78,8 @@ public class Minimax implements AIMoveSelector {
 
             // See if that move leaves the other player with no moves and return it if so:
             if (currentBoard.getCurrentPlayerMoves().isEmpty()) {
-                bestMove = m;
+                endMoveFound = true;
+                bestMove = move;
                 break;
             }
 
@@ -89,12 +91,12 @@ public class Minimax implements AIMoveSelector {
             boolean maximizing = side != Side.Black;
 
             Thread t = new Thread(() -> {
-                int currentValue = minmax(
+                int value = minmax(
                     currentBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, depth - 1, maximizing);
 
                 synchronized (resultsLock) {
-                    results.add(currentValue);
-                    results.add(m);
+                    results.add(value);
+                    results.add(move);
                 }
             });
             threads.add(t);
@@ -109,24 +111,25 @@ public class Minimax implements AIMoveSelector {
             }
         }
 
-        synchronized (resultsLock) {
-            while (!results.isEmpty()) {
-                int value = ((int) results.remove(0));
-                Move move = ((Move) results.remove(0));
-                if (side == Side.White) {
-                    if (value >= highest) {
-                        highest = value;
-                        bestMove = move;
-                    }
-                } else {
-                    if (value <= lowest) {
-                        lowest = value;
-                        bestMove = move;
+        if (!endMoveFound) {
+            synchronized (resultsLock) {
+                while (!results.isEmpty()) {
+                    int value = ((int) results.remove(0));
+                    Move move = ((Move) results.remove(0));
+                    if (side == Side.White) {
+                        if (value >= highest) {
+                            highest = value;
+                            bestMove = move;
+                        }
+                    } else {
+                        if (value <= lowest) {
+                            lowest = value;
+                            bestMove = move;
+                        }
                     }
                 }
             }
         }
-
         return bestMove;
     }
 
