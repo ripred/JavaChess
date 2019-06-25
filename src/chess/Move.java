@@ -20,6 +20,14 @@ public class Move {
         this.value = value;
     }
 
+    Move(final Move ref) {
+        this.fromCol = ref.fromCol;
+        this.fromRow = ref.fromRow;
+        this.toCol = ref.toCol;
+        this.toRow = ref.toRow;
+        this.value = ref.value;
+    }
+
     int  getFromCol()           { return fromCol; }
     int  getFromRow()           { return fromRow; }
     int  getToCol()             { return toCol; }
