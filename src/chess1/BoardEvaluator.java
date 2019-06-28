@@ -1,4 +1,4 @@
-package chess;
+package chess1;
 
 /**
  * The BoardEvaluator interface has one method: evaluate()
