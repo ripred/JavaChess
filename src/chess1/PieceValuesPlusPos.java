@@ -1,4 +1,4 @@
-package chess;
+package chess1;
 
 /**
  * The PieceValuesPlusPos class is an implementation of the
