@@ -1,3 +1,4 @@
 Manifest-Version: 1.0
-Main-Class: Main
+Class-Path: chess/src/chess1:chess/src/main
+Main-Class: main.Main
 
