@@ -1,8 +1,7 @@
-package chess;
+package chess1;
 
-import java.lang.Math;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -13,16 +12,18 @@ public class Board {
     private List<Spot> board;
     private List<Integer> piecesTaken0;
     private List<Integer> piecesTaken1;
-    private int verbose;
+    private List<Move> moveHistory;
+    private final int verbose;
     private int turn;
     private int passes;
+    private Move lastMove;
 
     /**
      * The default constructor for a Board object.
      *
      * Initializes the board to a new game state and sets the verbose level to none.
      */
-    Board() {
+    public Board() {
         verbose = 0;
         init();
     }
@@ -34,7 +35,7 @@ public class Board {
      *                Higher values for 'verbose' indicate more debug information.
      *                If this flag is 0 no debug output will be written to the console.
      */
-    Board(int verbose) {
+    public Board(int verbose) {
         this.verbose = verbose;
         init();
     }
@@ -44,11 +45,12 @@ public class Board {
      *
      * @param ref The Board object to copy into this new Board.
      */
-    Board(final Board ref) {
+    public Board(final Board ref) {
         board = ref.copyBoard();
         verbose = ref.verbose;
         turn = ref.turn;
         passes = ref.passes;
+        lastMove = new Move(ref.lastMove);
         if (ref.currentPlayerMoves == null) {
             currentPlayerMoves = null;
         } else {
@@ -59,131 +61,8 @@ public class Board {
         piecesTaken0.addAll(ref.piecesTaken0);
         piecesTaken1 = new ArrayList<>();
         piecesTaken1.addAll(ref.piecesTaken1);
-    }
-
-    /**
-     * @return Returns a new copy of the current List<Spot> of the spots on the board.
-     */
-    private List<Spot> copyBoard() {
-        List<Spot> newBoard = new ArrayList<>();
-        for (Spot s:board) newBoard.add(new Spot(s));
-        return newBoard;
-    }
-
-    /**
-     * @return Returns the list of spots on the board for the current game state.
-     */
-    List<Spot> getBoard() {
-        return board;
-    }
-
-    /**
-     * @return Returns 1 if the current side is white or 0 if the current side is black.
-     *
-     */
-    int getTurn() {
-        return turn;
-    }
-
-    int getVerbose() { return verbose; }
-
-    /**
-     * Advance the turn to the next player and create a new list of available moves for that player.
-     *
-     */
-    void advanceTurn() {
-        passes++;
-        turn = (turn == Side.White) ? Side.Black : Side.White;
-        currentPlayerMoves = getMovesSorted(turn);
-    }
-
-    /**
-     * Display the current board state on the output console.
-     *
-     */
-    void show() {
-        String[] charSetAscii = {"?","p","k","b","r","q","k"};
-        String[] charSetUnicodeWhite = {"?","♟","♞","♝","♜","♛","♚"};
-        String[] charSetUnicodeBlack = {"?","♙","♘","♗","♖","♕","♔"};
-        final boolean useUnicode = true;
-
-        for (int row=0; row <= 7; ++row) {
-            System.out.print(String.format("%d ", 8 - row));
-            for (int col=0; col <= 7; ++col) {
-                String c;
-                Spot spot = getSpot(col, row);
-                if (spot.isEmpty()) {
-                    c = ((col + row) % 2 == 0) ? "." : " ";
-                } else {
-                    if (spot.getSide() == Side.White) {
-                        if (useUnicode)
-                            c = charSetUnicodeWhite[spot.getType()];
-                        else
-                            c = charSetAscii[spot.getType()].toUpperCase();
-                    } else {
-                        if (useUnicode)
-                            c = charSetUnicodeBlack[spot.getType()];
-                        else
-                            c = charSetAscii[spot.getType()];
-                    }
-                }
-                System.out.print(c + " ");
-            }
-
-            // Show the pieces taken at the end of the first 2 rows:
-            if (row == 0) {
-                System.out.print("   Black pieces taken: ");
-                for (int piece : piecesTaken1) {
-                    System.out.print(charSetUnicodeWhite[piece] + " ");
-                }
-            } else if (row == 1) {
-                System.out.print("   White pieces taken: ");
-                for (int piece : piecesTaken0) {
-                    System.out.print(charSetUnicodeBlack[piece] + " ");
-                }
-            }
-
-            System.out.println();
-        }
-        System.out.println("  a b c d e f g h");
-    }
-
-    /**
-     * Set all of the attributes of a spot on the board.
-     *
-     * @param type The piece type to make the spot
-     * @param side The side to make the piece for (Unused if type == Piece.Empty)
-     * @param col The column of the spot to change
-     * @param row The row of the spot to change
-     */
-    void putPiece(final int type, final int side, final int col, final int row) {
-        board.set(row * 8 + col, new Spot(side, type, col, row));
-    }
-
-    /**
-     * Fill an entire row of the board with a specific set of Spot values.
-     * This is used as a helper function when initializing the board state.
-     *
-     * @param type The piece type to make the spots
-     * @param side The side to associate the spots with
-     * @param row The row on the board to fill.
-     */
-    void fillRow(final int type, final int side, final int row) {
-        for (int col=0; col <= 7; ++col) {
-            board.set(row * 8 + col, new Spot(side, type, col, row));
-        }
-    }
-
-    /**
-     * Initialize the list of Spots on the board to be a new list of empty spots
-     *
-     */
-    void initBoardArray() {
-        board = new ArrayList<>(64);
-        for (int n=0; n < 64; ++n) {
-            board.add(new Spot(Side.Black, Piece.Empty, n % 8, n / 8));
-        }
-        passes = 0;
+        moveHistory = new ArrayList<>();
+        moveHistory.addAll(ref.moveHistory);
     }
 
     /**
@@ -210,27 +89,204 @@ public class Board {
         putPiece(Piece.Knight, Side.White, 6, 7);
         putPiece(Piece.Rook,   Side.White, 7, 7);
 
+        passes = 1;
+        lastMove = new Move(-1, -1, -1, -1, -1);
         turn = Side.White;
-
         piecesTaken0 = new ArrayList<>();
         piecesTaken1 = new ArrayList<>();
-
+        moveHistory = new ArrayList<>();
         currentPlayerMoves = getMovesSorted(turn);
     }
 
     /**
      * Test board
      */
-    void initTest() {
+    public void initTest() {
         initBoardArray();
 
-        putPiece(Piece.King,  Side.Black, 4, 0);
+        putPiece(Piece.King,  Side.Black, 2, 4);
+        getSpot(2, 4).setMoved(true);
 
-        putPiece(Piece.Queen, Side.White, 2, 6);
-        putPiece(Piece.Rook,  Side.White, 7, 6);
+        putPiece(Piece.Queen, Side.White, 3, 6);
+        putPiece(Piece.King,  Side.White, 2, 6);
+        getSpot(2, 6).setMoved(true);
 
+        passes = 1;
+        lastMove = new Move(-1, -1, -1, -1, -1);
         turn = Side.White;
+        piecesTaken0 = new ArrayList<>();
+        piecesTaken1 = new ArrayList<>();
+        moveHistory = new ArrayList<>();
         currentPlayerMoves = getMovesSorted(turn);
+    }
+
+    /**
+     * @return Returns a new copy of the current List<Spot> of the spots on the board.
+     */
+    private List<Spot> copyBoard() {
+        List<Spot> newBoard = new ArrayList<>();
+        for (Spot s:board) newBoard.add(new Spot(s));
+        return newBoard;
+    }
+
+    /**
+     * @return Returns the list of spots on the board for the current game state.
+     */
+    List<Spot> getBoard() {
+        return board;
+    }
+
+    /**
+     * @return Returns 1 if the current side is white or 0 if the current side is black.
+     *
+     */
+    public int getTurn() {
+        return turn;
+    }
+
+    public int getNumTurns() { return passes; }
+
+    public Move getLastMove() {
+        return new Move(lastMove);
+    }
+
+    int getVerbose() { return verbose; }
+
+    public final List<Integer> getPiecesTaken0() {
+        List<Integer> list = new ArrayList<>(piecesTaken0.size());
+        list.addAll(piecesTaken0);
+        return list;
+    }
+
+    public final List<Integer> getPiecesTaken1() {
+        List<Integer> list = new ArrayList<>(piecesTaken1.size());
+        list.addAll(piecesTaken1);
+        return list;
+    }
+
+    public final List<Move> getMoveHistory() {
+        List<Move> list = new ArrayList<>();
+        moveHistory.forEach(m -> {
+            list.add(new Move(m));
+        });
+        return list;
+    }
+
+    public boolean checkDrawByRepetition(final int maxRepetitions) {
+        // Check for draw-by-repetition (same made too many times in a row by a player)
+        List<Move> history = getMoveHistory();
+        return history.size() >= Math.pow(2.0, (float) maxRepetitions + 1)
+                && Collections.frequency(
+                history.subList(history.size() - (int) Math.pow(2.0, (float) maxRepetitions + 1), history.size()), getLastMove()) >= maxRepetitions;
+    }
+
+    public boolean checkDrawByRepetition(final Move move, final int maxRepetitions) {
+        // Check for draw-by-repetition (same made too many times in a row by a player)
+        List<Move> history = getMoveHistory();
+        return history.size() >= Math.pow(2.0, (float) maxRepetitions + 1)
+                && Collections.frequency(
+                history.subList(history.size() - (int) Math.pow(2.0, (float) maxRepetitions + 1), history.size()), move) >= maxRepetitions;
+    }
+
+    /**
+     * Advance the turn to the next player and create a new list of available moves for that player.
+     *
+     */
+    public void advanceTurn() {
+        passes++;
+        turn = (turn == Side.White) ? Side.Black : Side.White;
+        currentPlayerMoves = getMovesSorted(turn);
+    }
+
+//    /**
+//     * Display the current board state on the output console.
+//     *
+//     */
+//    @SuppressWarnings("ConstantConditions")
+//    void show() {
+//        String[] charSetAscii = {"?","p","k","b","r","q","k"};
+////        String tmpWhitePawn = "♟";
+//        String[] charSetUnicodeWhite = {"?","♙","♞","♝","♜","♛","♚"};
+//        String[] charSetUnicodeBlack = {"?","♙","♘","♗","♖","♕","♔"};
+//        final boolean useUnicode = true;
+//
+//        for (int row=0; row <= 7; ++row) {
+//            System.out.print(String.format("%d ", 8 - row));
+//            for (int col=0; col <= 7; ++col) {
+//                String c;
+//                Spot spot = getSpot(col, row);
+//                if (spot.isEmpty()) {
+//                    c = ((col + row) % 2 == 0) ? "." : " ";
+//                } else {
+//                    if (spot.getSide() == Side.White) {
+//                        if (useUnicode)
+//                            c = charSetUnicodeWhite[spot.getType()];
+//                        else
+//                            c = charSetAscii[spot.getType()].toUpperCase();
+//                    } else {
+//                        if (useUnicode)
+//                            c = charSetUnicodeBlack[spot.getType()];
+//                        else
+//                            c = charSetAscii[spot.getType()];
+//                    }
+//                }
+//                System.out.print(c + " ");
+//            }
+//
+//            // Show the pieces taken at the end of the first 2 rows:
+//            if (row == 0) {
+//                System.out.print("   Black pieces taken: ");
+//                for (int piece : piecesTaken1) {
+//                    System.out.print(charSetUnicodeWhite[piece] + " ");
+//                }
+//            } else if (row == 1) {
+//                System.out.print("   White pieces taken: ");
+//                for (int piece : piecesTaken0) {
+//                    System.out.print(charSetUnicodeBlack[piece] + " ");
+//                }
+//            }
+//
+//            System.out.println();
+//        }
+//        System.out.println("  a b c d e f g h");
+//    }
+
+    /**
+     * Set all of the attributes of a spot on the board.
+     *
+     * @param type The piece type to make the spot
+     * @param side The side to make the piece for (Unused if type == Piece.Empty)
+     * @param col The column of the spot to change
+     * @param row The row of the spot to change
+     */
+    void putPiece(final int type, final int side, final int col, final int row) {
+        board.set(row * 8 + col, new Spot(side, type, col, row));
+    }
+
+    /**
+     * Fill an entire row of the board with a specific set of Spot values.
+     * This is used as a helper function when initializing the board state.
+     *
+     * @param type The piece type to make the spots
+     * @param side The side to associate the spots with
+     * @param row The row on the board to fill.
+     */
+    private void fillRow(final int type, final int side, final int row) {
+        for (int col=0; col <= 7; ++col) {
+            board.set(row * 8 + col, new Spot(side, type, col, row));
+        }
+    }
+
+    /**
+     * Initialize the list of Spots on the board to be a new list of empty spots
+     *
+     */
+    private void initBoardArray() {
+        final int BOARD_SIZE = 64;
+        board = new ArrayList<>(BOARD_SIZE);
+        for (int pos=0; pos < BOARD_SIZE; ++pos) {
+            board.add(new Spot(Side.Black, Piece.Empty, pos % 8, pos / 8));
+        }
     }
 
     /**
@@ -252,7 +308,7 @@ public class Board {
      * @return returns the Spot at the specified location
      * @throws IllegalArgumentException if the specified location is invalid
      */
-    Spot getSpot(final int col, final int row) throws IllegalArgumentException {
+    public Spot getSpot(final int col, final int row) throws IllegalArgumentException {
         if (!isValidSpot(col, row)) {
             throw new IllegalArgumentException("Invalid column: " + col + " or row: " + row);
         }
@@ -268,7 +324,9 @@ public class Board {
      *
      * @param move The Move to be executed on the current board
      */
-    void executeMove(final Move move) {
+    public void executeMove(final Move move) {
+        lastMove = new Move(move);
+
         int fx = move.getFromCol();
         int fy = move.getFromRow();
         int tx = move.getToCol();
@@ -320,6 +378,7 @@ public class Board {
                 board.get(ti).setType(Piece.Queen);
             }
         }
+        moveHistory.add(move);
     }
 
     /**
@@ -330,7 +389,7 @@ public class Board {
      *
      * @return Returns The list of all available moves for the current player
      */
-    List<Move> getCurrentPlayerMoves() {
+    public List<Move> getCurrentPlayerMoves() {
         return currentPlayerMoves;
     }
 
@@ -341,7 +400,8 @@ public class Board {
      * @param side The side to examine to see if it is in check
      * @return true if the current player is in check otherwise false.
      */
-    boolean kingInCheck(final Board board, final int side) {
+    public List<Move> kingInCheck(final Board board, final int side) {
+        List<Move> moves = new ArrayList<>();
         int otherSide = (side == Side.White) ? Side.Black : Side.White;
         List<Move> opponentMoves = board.getMoves(otherSide, false);
 
@@ -350,12 +410,12 @@ public class Board {
 
             for (Move m : opponentMoves) {
                 if (m.getToCol() == s.getCol() && m.getToRow() == s.getRow()) {
-                    return true;
+                    moves.add(new Move(m));
                 }
             }
             break;
         }
-        return false;
+        return moves;
     }
 
     /**
@@ -364,7 +424,7 @@ public class Board {
      * @param side The side to get all available moves for
      * @return Returns a new List<Move> of all possible moves for the specified side
      */
-    List<Move> getMoves(final int side, final boolean checkKing) {
+    public List<Move> getMoves(final int side, final boolean checkKing) {
         final long startTime = System.nanoTime();
         final List<Move> moves = new ArrayList<>();
         List<Move> pMoves;
@@ -417,7 +477,7 @@ public class Board {
      * @return Returns a List<Move> of all possible moves sorted in descending order
      *         based on the value of each move.
      */
-    List<Move> getMovesSorted(final int side) {
+    public List<Move> getMovesSorted(final int side) {
         Comparator<Move> sortByValue = Comparator.comparing(Move::getValue).reversed();
         List<Move> moves = getMoves(side, true);
         moves.sort(sortByValue);
@@ -436,7 +496,7 @@ public class Board {
         for (Move m:moves) {
             Board current = new Board(this);
             current.executeMove(m);
-            if (!kingInCheck(current, side)) {
+            if (kingInCheck(current, side).size() == 0) {
                 valid.add(m);
             }
         }
@@ -448,7 +508,6 @@ public class Board {
      *
      * This method help eliminate repetitious blocks of code that perform the same checks
      * in the move generator code for each of the individual pieces.
-     *
      * @param moves The List<Move> of moves to add the move to if it is valid
      * @param fromCol The column of piece to be moved
      * @param fromRow The row of the piece to be moved
@@ -518,7 +577,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a pawn could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    List<Move> getPawnMoves(int col, int row) throws IllegalArgumentException {
+    private List<Move> getPawnMoves(int col, int row) throws IllegalArgumentException {
         if (!isValidSpot(col, row)) {
             throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
         }
@@ -547,13 +606,13 @@ public class Board {
      * @return A new List<Move> containing all possible moves a rook could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    List<Move> getRookMoves(int col, int row) throws IllegalArgumentException {
+    private List<Move> getRookMoves(int col, int row) throws IllegalArgumentException {
         if (!isValidSpot(col, row)) {
             throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
         }
-        Spot spot = getSpot(col, row);
+        Spot startSpot = getSpot(col, row);
 
-        if (spot.isEmpty()) {
+        if (startSpot.isEmpty()) {
             throw new IllegalArgumentException("No piece at spot col: " + col + " or row: " + row);
         }
 
@@ -563,32 +622,32 @@ public class Board {
             if (!isValidSpot(x, row))
                 break;
             addMoveIfValid(moves, col, row, x, row);
-            Spot nextSpot = getSpot(x, row);
-            if (!nextSpot.isEmpty())
+            Spot spot = getSpot(x, row);
+            if (!spot.isEmpty())
                 break;
         }
         for (int x=col + 1; x <= 7; ++x) {
             if (!isValidSpot(x, row))
                 break;
             addMoveIfValid(moves, col, row, x, row);
-            Spot nextSpot = getSpot(x, row);
-            if (!nextSpot.isEmpty())
+            Spot spot = getSpot(x, row);
+            if (!spot.isEmpty())
                 break;
         }
         for (int y=row - 1; y >= 0; --y) {
             if (!isValidSpot(col, y))
                 break;
             addMoveIfValid(moves, col, row, col, y);
-            Spot nextSpot = getSpot(col, y);
-            if (!nextSpot.isEmpty())
+            Spot spot = getSpot(col, y);
+            if (!spot.isEmpty())
                 break;
         }
         for (int y=row + 1; y <= 7; ++y) {
             if (!isValidSpot(col, y))
                 break;
             addMoveIfValid(moves, col, row, col, y);
-            Spot nextSpot = getSpot(col, y);
-            if (!nextSpot.isEmpty())
+            Spot spot = getSpot(col, y);
+            if (!spot.isEmpty())
                 break;
         }
         return moves;
@@ -602,7 +661,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a knight could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    List<Move> getKnightMoves(int col, int row) throws IllegalArgumentException {
+    private List<Move> getKnightMoves(int col, int row) throws IllegalArgumentException {
         if (!isValidSpot(col, row)) {
             throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
         }
@@ -634,7 +693,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a bishop could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    List<Move> getBishopMoves(int col, int row) throws IllegalArgumentException {
+    private List<Move> getBishopMoves(int col, int row) throws IllegalArgumentException {
         if (!isValidSpot(col, row)) {
             throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
         }
@@ -693,7 +752,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a queen could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    List<Move> getQueenMoves(int col, int row) throws IllegalArgumentException {
+    private List<Move> getQueenMoves(int col, int row) throws IllegalArgumentException {
         if (!isValidSpot(col, row)) {
             throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
         }
@@ -717,7 +776,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a king could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    List<Move> getKingMoves(int col, int row) throws IllegalArgumentException {
+    private List<Move> getKingMoves(int col, int row) throws IllegalArgumentException {
         if (!isValidSpot(col, row)) {
             throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
         }
