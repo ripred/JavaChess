@@ -1,4 +1,4 @@
-package chess;
+package chess1;
 
 /**
  * The TotalPieceValues class is an implementation of the

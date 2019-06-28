@@ -1,6 +1,6 @@
-package chess;
+package chess1;
 
-interface Piece {
+public interface Piece {
     int MAX_VALUE = Integer.MAX_VALUE - (Integer.MAX_VALUE / 4);
     int MIN_VALUE = 0 - MAX_VALUE;
 

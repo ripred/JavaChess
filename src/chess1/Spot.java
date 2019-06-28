@@ -1,4 +1,4 @@
-package chess;
+package chess1;
 
 public class Spot {
     private int     side;   // Side.White or Side.Black
@@ -13,7 +13,7 @@ public class Spot {
      * @param col   the column location of this spot
      * @param row   the row    location of this spot
      */
-    Spot(int side, int type, int col, int row) {
+    public Spot(int side, int type, int col, int row) {
         setColor(side);
         setType(type);
         setCol(col);
@@ -24,7 +24,7 @@ public class Spot {
     /**
      * @param spot the Spot object to be copied into this new Spot object in this copy constructor
      */
-    Spot(final Spot spot) {
+    public Spot(final Spot spot) {
         side  = spot.side;
         type  = spot.type;
         col   = spot.col;
@@ -32,12 +32,12 @@ public class Spot {
         moved = spot.moved;
     }
 
-    int     getSide()   {return side;}
-    int     getType()   {return type;}
-    int     getCol()    {return col;}
-    int     getRow()    {return row;}
-    boolean getMoved()  {return moved;}
-    boolean isEmpty()   {return type == Piece.Empty;}  // spot is empty if true
+    public int     getSide()   {return side;}
+    public int     getType()   {return type;}
+    public int     getCol()    {return col;}
+    public int     getRow()    {return row;}
+    public boolean getMoved()  {return moved;}
+    public boolean isEmpty()   {return type == Piece.Empty;}  // spot is empty if true
 
     void setColor(int s)        { side = s; }
     void setType(int n)         { type = n; }
