@@ -1,5 +1,6 @@
 package main;
 
+import static main.Ansi.*;
 import chess1.*;
 
 import sun.misc.Signal;
@@ -33,7 +34,6 @@ class MyCallback implements Consumer<String> {
 }
 
 public class Main {
-    private static final String csi = new String(new byte[]{0x1b, '['});
 
     // Playing with JNI !
     //
@@ -49,13 +49,13 @@ public class Main {
             // handle SIGINT
 
             // Reset display attributes
-            System.out.print("\r" + csi + "0m");
+            System.out.print("\r" + resetAll);
 
             // clear display to end of line
-            System.out.print("\r" + csi + "K");
+            System.out.print("\r" + clearEOL);
 
             // Turn the cursor on
-            System.out.println(csi + "?25h");
+            System.out.println(cursOn);
 
             System.out.println("Goodbye");
             exit(0);
@@ -72,32 +72,18 @@ public class Main {
         while (true) {
             playGame(isHuman);
             if (!isHuman) {
-                try {
-                    if (System.in.available() > 0)
-                        System.in.readAllBytes();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                try { while (System.in.available() > 0) System.in.readAllBytes(); }
+                catch (IOException e) { e.printStackTrace(); }
                 print("New game starts in 5 seconds - press any key to exit...");
-                for (int i = 0; i < 500; ++i) {
+                for (int i=0; i < 500; ++i) {
                     try {
-                        try {
-                            if (System.in.available() > 0)
-                                break;
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                        try { if (System.in.available() > 0) break; }
+                        catch (IOException e) { e.printStackTrace(); }
+                    Thread.sleep(10); }
+                    catch (InterruptedException e) { e.printStackTrace(); }
                 }
-                try {
-                    if (System.in.available() > 0)
-                        break;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                try { if (System.in.available() > 0) break; }
+                catch (IOException e) { e.printStackTrace(); }
             }
         }
 
@@ -105,7 +91,7 @@ public class Main {
         print("Goodbye");
 
         // Turn the cursor on
-        System.out.print(csi + "?25h");
+        System.out.print(cursOn);
     }
 
     private static void playGame(final boolean isHuman) {
@@ -395,7 +381,7 @@ public class Main {
         String response;
 
         // Turn the cursor on
-        System.out.print(csi + "?25h");
+        System.out.print(cursOn);
 
         while (true) {
             System.out.print(prompt);
@@ -431,12 +417,6 @@ public class Main {
         }
     }
 
-    private static String makeFore24(final int r, final int g, final int b) {
-        return csi + "38;2;" + r + ";" + g + ";" + b + "m";
-    }
-    private static String makeBack24(final int r, final int g, final int b) {
-        return csi + "48;2;" + r + ";" + g + ";" + b + "m";
-    }
     private static String mergeColors24(String clr1, String clr2, final boolean fore) {
         String[] parts1 = clr1.split(";");
         String[] parts2 = clr2.split(";");
@@ -462,9 +442,9 @@ public class Main {
         double b3 = ((pb1 + pb2) / 2.0);
 
         if (fore) {
-            return makeFore24((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
+            return fg24b((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
         } else {
-            return makeBack24((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
+            return bg24b((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
         }
     }
 
@@ -547,45 +527,38 @@ public class Main {
 //        final String[] charSetUnicodeBlack = {"?","♙","♘","♗","♖","♕","♔"};
 //        final boolean useUnicode = true;
 
-        final String rstAttr   = csi + "0m";
-        final String boldAttr  = csi + "1m";
-//        final String faintAttr = csi + "2m";
-//        final String underAttr = csi + "4m";
-//        final String noneAttr  = csi + "22m";
-//        final String revAttr   = csi + "7m";
-//        final String crossAttr = csi + "9m";
 
         // The screen row to begin displaying on
         int topRow = 1;
 
         // The background colors of the squares
-        final String blkBack  = makeBack24(142, 142, 142);
-        final String whtBack  = makeBack24(204, 204, 204);
+        final String blkBack  = bg24b(142, 142, 142);
+        final String whtBack  = bg24b(204, 204, 204);
 
         // The colors of the pieces
-        final String blkForeB = makeFore24( 64,  64,  64);
-        final String blkForeW = makeFore24(  0,   0,   0);
-        final String whtForeB = makeFore24(255, 255, 255);
-        final String whtForeW = makeFore24(255, 255, 255);
+        final String blkForeB = fg24b( 64,  64,  64);
+        final String blkForeW = fg24b(  0,   0,   0);
+        final String whtForeB = fg24b(255, 255, 255);
+        final String whtForeW = fg24b(255, 255, 255);
 
         // The colors of the last moved piece
-        final String blkMoved = makeFore24( 128,   0,  0);
-        final String whtMoved = makeFore24( 192, 192,  0);
+        final String blkMoved = fg24b( 128,   0,  0);
+        final String whtMoved = fg24b( 192, 192,  0);
 
         // The colors of the kings in check
-        final String blkCheck = makeFore24( 192, 128,  0);
-        final String whtCheck = makeFore24( 192, 128,  0);
+        final String blkCheck = fg24b( 192, 128,  0);
+        final String whtCheck = fg24b( 192, 128,  0);
 
         // The colors of paths to opponent pieces that we can take
         // current player moves tends towards blues
         //
-        final String blueInfluence = makeBack24(  0,    0, 64);
+        final String blueInfluence = bg24b(  0,    0, 64);
         final String blkTakePath = mergeColors24(blueInfluence, blkBack, false);
         final String whtTakePath = mergeColors24(blueInfluence, whtBack, false);
 
         // The colors of opponent paths to our pieces that they can take
         // opponent moves tends towards reds
-        final String redInfluence = makeBack24(  64,   0,   0);
+        final String redInfluence = bg24b(  64,   0,   0);
         final String blkGivePath = mergeColors24(redInfluence, blkBack, false);
         final String whtGivePath = mergeColors24(redInfluence, whtBack, false);
 
@@ -665,14 +638,14 @@ public class Main {
         // ====================================================================
 
         // Move the cursor to the specified row
-        System.out.print(csi + String.format("%d;1f", topRow));
+        System.out.print(cursPos(1, topRow));
 
         // Turn off the cursor
-        System.out.print(csi + "?25l");
+        System.out.print(cursOff);
 
         if (moveDesc != null) {
             System.out.print(moveDesc);
-            System.out.print(csi + "K"); // clear display to end of line
+            System.out.print(clearEOL); // clear display to end of line
         }
         System.out.println();
         System.out.println();
@@ -751,7 +724,7 @@ public class Main {
                 final String txt = (fmtClrBack + fmtClrFore + fmtAttr + " ") + chr + " ";
                 System.out.print(txt);
             }
-            System.out.print(rstAttr);
+            System.out.print(resetAll);
 
             if (row == 0) {
                 System.out.print(takenMsg1);
@@ -759,7 +732,7 @@ public class Main {
                 System.out.print(takenMsg0);
             } else if (row == 4) {
                 System.out.print(stat0);
-                System.out.print(csi + "K"); // clear display to end of line
+                System.out.print(clearEOL); // clear display to end of line
             } else if (row == 5) {
                 System.out.print(stat1);
             } else if (row == 6) {
@@ -773,3 +746,4 @@ public class Main {
         print();
     }
 }
+
