@@ -1,5 +1,7 @@
 package main;
 
+import static java.lang.Math.sqrt;
+
 public class Ansi {
 
     //////////////////////////////////////////////////////////
@@ -68,4 +70,66 @@ public class Ansi {
     //////////////////////////////////////////////////////////
     // Position the cursor to a column and row:
     public static String cursPos(int col, int row) { return CSI + row+";"+col+"f"; }
+
+
+
+
+    private static void testAnsi() {
+        String csi = new String(new byte[]{0x1b, '['});
+        String fg = csi + "38:5:";
+        String bg = csi + "48:5:";
+        int loop, i;
+
+        // Standard and high-intensity colors
+        for (i = 0; i < 16; ++i) {
+            String out = csi + (i < 8 ? "97m" : "30m") + bg + i + "m" + String.format("%6d   ", i);
+            System.out.print(out);
+        }
+        System.out.println(csi + "0m");
+
+        // 216 colors
+        for (loop = 0, i = 16; i < 232; ++i) {
+            String out = csi + ((loop % 36) < (18) ? "97m" : "30m") + bg + i + "m" + String.format("%3d ", i);
+            System.out.print(out);
+            if ((++loop) % 36 == 0) System.out.println(csi + "40m");
+        }
+
+        // Grayscale colors
+        for (loop = 0, i = 232; i < 256; ++i) {
+            String out = csi + ((loop) < (12) ? "97m" : "30m") + bg + i + "m" + String.format("%4d  ", i);
+            System.out.print(out);
+            loop++;
+        }
+        System.out.println(csi + "0m");
+
+        // 24-bit colors
+        final int redStep = 48;
+        final int greenStep = 32;
+        final int blueStep = 16;
+        for (int r = 0; r < 256; r += redStep) {
+            for (int g = 0; g < 256; g += greenStep) {
+                for (int b = 0; b < 256; b += blueStep) {
+                    String fg24 = csi + "38;2;";
+                    String bg24 = csi + "48;2;";
+                    double brightness = sqrt((r * g) + (g * b) + (b * r));
+                    String contrastFg = csi + ((brightness >= 192.0) ? "30m" : "97m");
+                    String out = (contrastFg)
+                            + (bg24 + (g) + ";" + (b) + ";" + (r) + "m")
+                            + String.format("%02X%02X%02X ", r, g, b);
+                    System.out.print(out);
+                }
+                System.out.println(csi + "0m");
+            }
+        }
+        System.out.println();
+
+        System.out.println(csi + "1m Bold             Rendition" + csi + "0m");
+        System.out.println(csi + "2m Faint            Rendition" + csi + "0m");
+        System.out.println(csi + "4m Underline        Rendition" + csi + "0m");
+        System.out.println(csi + "22m Neither          Rendition" + csi + "0m");
+        System.out.println(csi + "7m Reverse Video    Rendition" + csi + "0m");
+        System.out.println(csi + "9m Crossed Out      Rendition" + csi + "0m");
+
+        System.out.println();
+    }
 }
