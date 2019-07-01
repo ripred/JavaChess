@@ -3,6 +3,7 @@ package main;
 import static main.Ansi.*;
 
 //import chess1.*;
+import chess1.ChessConfig;
 import chess1.Board;
 import chess1.Piece;
 import chess1.Move;
@@ -44,6 +45,7 @@ class MyCallback implements Consumer<String> {
     }
 }
 
+
 public class Main {
 
     // Playing with JNI !
@@ -54,41 +56,54 @@ public class Main {
         System.loadLibrary("native");
     }
 
-    static AIMoveSelector moveAgent = null;
+    private static AIMoveSelector moveAgent = null;
+
+    private static ChessConfig config;
+
+    private static void onExit() {
+        if (moveAgent != null) {
+            try {
+                // Reset display attributes
+                System.out.print("\r" + resetAll);
+
+                // clear display to end of line
+                System.out.print("\r" + clearEOL);
+
+                // Turn the cursor back on
+                System.out.println(cursOn);
+
+                System.out.println("Max threads used at once: " + moveAgent.getMaxThreads());
+
+                moveAgent.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                moveAgent = null;
+                System.out.println("Goodbye");
+            }
+        }
+
+        if (config != null) {
+            config.saveConfiguration();
+        }
+    }
 
     public static void main(String[] args) {
 
-        final int depth = 6;
-//        final int maxSeconds = 7 * 60;
-        final int maxSeconds = 30;
-        moveAgent = new Minimax(depth, maxSeconds);
+        config = new ChessConfig("chess.properties");
+        config.loadConfiguration();
 
+        final int depth = config.maxDepth;
+//        final int maxSeconds = 7 * 60;
+        final int maxSeconds = config.maxSeconds;
+        final int maxThreads = config.maxThreads;
+
+        moveAgent = new Minimax(maxThreads, depth, maxSeconds);
 
         SignalHandler sigHandler = sig -> {
             // handle SIGINT
 
-            if (moveAgent != null) {
-                try {
-                    // Reset display attributes
-                    System.out.print("\r" + resetAll);
-                    // clear display to end of line
-                    System.out.print("\r" + clearEOL);
-                    // Turn the cursor on
-                    System.out.println(cursOn);
-
-                    System.out.println("Max threads used at once: " + moveAgent.getMaxThreads());
-
-                    moveAgent.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    moveAgent = null;
-
-                    System.out.println("Goodbye");
-                    System.exit(0);
-                }
-            }
-
+            onExit();
             System.exit(0);
         };
 
@@ -102,7 +117,7 @@ public class Main {
         // call our C++ code just for fun: 😎
         new Main().CGateway();
 
-        final boolean isHuman = false;
+        final boolean isHuman = config.humanPlayer;
 
         while (true) {
             playGame(moveAgent, isHuman);
@@ -139,21 +154,7 @@ public class Main {
             System.out.println(clearEOL);
         }
 
-        print();
-        print("Goodbye");
-
-        // Turn the cursor on
-        System.out.print(cursOn);
-
-        if (moveAgent != null) {
-            try {
-                moveAgent.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                moveAgent = null;
-            }
-        }
+        onExit();
     }
 
     private static void playGame(AIMoveSelector moveAgent, final boolean isHuman) {
