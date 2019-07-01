@@ -26,40 +26,6 @@ import java.util.Map;
 //      of the hack I have now using a Consumer<T>
 
 /**
- * The BestMove objects are a transparent structure to have places to keep
- * track of the best moves seen by each thread as they search
- *
- */
-class BestMove {
-    Move move;
-    int value;
-
-    BestMove(boolean maximize) {
-        value = maximize ? Piece.MIN_VALUE : Piece.MAX_VALUE;
-        move = null;
-    }
-
-    @Override
-    public String toString() {
-        String string = "Move: ";
-
-        if (move == null) {
-            string += "null";
-        } else {
-            string += String.format("%c%d to %c%d",
-                    move.getFromCol() + 'a',
-                    8 - move.getFromRow(),
-                    move.getToCol() + 'a',
-                    8 - move.getToRow());
-        }
-        string += String.format(" Value: %,12d", value);
-
-        return string;
-    }
-}
-
-
-/**
  *
  * Implementation of the Minimax algorithm with alpha-beta pruning.
  *
@@ -93,7 +59,6 @@ public class Minimax implements AIMoveSelector, Closeable {
     public int getMaxThreads() {
         return maxThreads;
     }
-
 
     /**
      * The LookAheadMoveThread objects are what is launched for each move the current player has.
@@ -131,7 +96,6 @@ public class Minimax implements AIMoveSelector, Closeable {
             }
         }
 
-
         // This call is made to us when we are launched
         @Override
         public LookAheadMoveThread call() {
@@ -155,7 +119,6 @@ public class Minimax implements AIMoveSelector, Closeable {
         }
     }
 
-
     public Minimax(final int depth, final int maxSeconds) {
         this.maxSeconds = maxSeconds;
         this.startDepth = depth;
@@ -172,6 +135,13 @@ public class Minimax implements AIMoveSelector, Closeable {
         }
     }
 
+    public void setDepth(int n) {
+        startDepth = n;
+    }
+
+    public int getDepth() {
+        return startDepth;
+    }
 
 
     /**
