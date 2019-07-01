@@ -266,26 +266,6 @@ public class Main {
             }
         }
 
-        if (showHistory) {
-            List<Move> history = board.getMoveHistory();
-            int numMoves = history.size();
-            print("Game History:");
-            print(" White         Black");
-            for (int i = 0; i < numMoves; ++i) {
-                Move m = history.get(i);
-                if (i % 2 == 0)
-                    System.out.print(String.format("%3d ", 1 + i));
-                System.out.print(String.format("%c%d to %c%d     ",
-                        m.getFromCol() + 'a',
-                        8 - m.getFromRow(),
-                        m.getToCol() + 'a',
-                        8 - m.getToRow()));
-                if (i % 2 == 1)
-                    System.out.println();
-            }
-            print();
-        }
-
         int hours = 0;
         int minutes = 0;
         int seconds;
@@ -671,8 +651,8 @@ public class Main {
                 boolean spotIsTarget = isSpotATarget(targets, col, row);
                 boolean spotIsVictim = isSpotATarget(victims, col, row);
 
-                boolean showTargets = true;
-                boolean showVictims = true;
+                boolean showTargets = config.showTargetPaths;
+                boolean showVictims = config.showVictimPaths;
                 boolean keepPerspective = board.getTurn() == Side.Black;
 
                 if (spotIsTarget && !spotIsVictim) {
