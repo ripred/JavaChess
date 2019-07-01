@@ -1,23 +1,33 @@
 package main;
 
 import static main.Ansi.*;
-import chess1.*;
+
+//import chess1.*;
+import chess1.Board;
+import chess1.Piece;
+import chess1.Move;
+import chess1.Spot;
+import chess1.Side;
+
+//import chess1.AI.*;
+import chess1.AI.PieceValuesPlusPos;
+import chess1.AI.AIMoveSelector;
+import chess1.AI.BoardEvaluator;
+import chess1.AI.Minimax;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Scanner;
+import java.util.List;
+import java.util.Map;
+
+import java.util.function.Consumer;
+import java.io.IOException;
 
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
 import static java.lang.Math.abs;
-import static java.lang.Math.sqrt;
-import static java.lang.System.exit;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.function.Consumer;
-
 
 class MyCallback implements Consumer<String> {
     static Board board;
@@ -44,11 +54,11 @@ public class Main {
         System.loadLibrary("native");
     }
 
-    static Minimax moveAgent = null;
+    static AIMoveSelector moveAgent = null;
 
     public static void main(String[] args) {
 
-        final int depth = 7;
+        final int depth = 6;
 //        final int maxSeconds = 7 * 60;
         final int maxSeconds = 30;
         moveAgent = new Minimax(depth, maxSeconds);
@@ -72,7 +82,6 @@ public class Main {
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
-                    moveAgent.pool = null;
                     moveAgent = null;
 
                     System.out.println("Goodbye");
@@ -142,13 +151,12 @@ public class Main {
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                moveAgent.pool = null;
                 moveAgent = null;
             }
         }
     }
 
-    private static void playGame(Minimax moveAgent, final boolean isHuman) {
+    private static void playGame(AIMoveSelector moveAgent, final boolean isHuman) {
         System.out.println("\n".repeat(20));
 
         final Board board = new Board(1);

@@ -11,7 +11,6 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.io.Closeable;
 import java.util.HashMap;
@@ -39,18 +38,16 @@ import java.util.Map;
  */
 public class Minimax implements AIMoveSelector, Closeable {
     private final Object processedLock = new Object();
-
-//        evaluator = new TotalPieceValues();
+    private static ExecutorService pool = Executors.newFixedThreadPool(100);
     private final BoardEvaluator evaluator = new PieceValuesPlusPos();
+    private Consumer<String> callback;
     private Integer movesProcessed;
     private long maxSeconds;
     private int maxThreads;
     private int startDepth;
     private long stopNanos;
-    private Consumer<String> callback;
 
-    public static ExecutorService pool = Executors.newFixedThreadPool(100);
-
+    @Override
     public void registerDisplayCallback(Consumer<String> cb) {
         callback = cb;
     }
@@ -61,6 +58,7 @@ public class Minimax implements AIMoveSelector, Closeable {
         }
     }
 
+    @Override
     public int getMaxThreads() {
         return maxThreads;
     }
@@ -87,7 +85,7 @@ public class Minimax implements AIMoveSelector, Closeable {
         }
     }
 
-    public int evaluate(final Board board) {
+    int evaluate(final Board board) {
         return evaluator.evaluate(board);
     }
 
@@ -172,11 +170,11 @@ public class Minimax implements AIMoveSelector, Closeable {
 //                    numThreads,
 //                    best.toString()));
 
-            if (threadResult.endMoveFound) {
+            if (threadResult != null && threadResult.endMoveFound) {
                 best.move = threadResult.best.move;
                 best.value = threadResult.best.value;
 
-                for (int k=i+1; k < numThreads; ++k) {
+                for (int k = i + 1; k < numThreads; ++k) {
                     lookAheadThreads[k].cancel(true);
                 }
                 break;
@@ -184,33 +182,23 @@ public class Minimax implements AIMoveSelector, Closeable {
 
             Thread.yield();
 
-            if (maximize && threadResult.best.value >= best.value) {
-                best.value = threadResult.best.value;
-                best.move = threadResult.best.move;
-            } else if (!maximize && threadResult.best.value <= best.value) {
-                best.value = threadResult.best.value;
-                best.move = threadResult.move;
+            if (threadResult != null) {
+                if (maximize && threadResult.best.value >= best.value) {
+                    best.value = threadResult.best.value;
+                    best.move = threadResult.best.move;
+                } else if (!maximize && threadResult.best.value <= best.value) {
+                    best.value = threadResult.best.value;
+                    best.move = threadResult.move;
+                }
             }
 
             best.move = checkEndGameCornerCases(board, best.move);
-
-//            // If we are out of time then return the best outcome we've seen this move accomplish
-//            if (maxSeconds > 0 && System.nanoTime() >= stopNanos) {
-////                printMsg(String.format("Time out for side %d.  Stop time = %d, clock time is %d",
-////                        board.getTurn(),
-////                        stopNanos,
-////                        System.nanoTime()));
-//                for (int k=i; k < numThreads; ++k) {
-//                    lookAheadThreads[k].cancel(true);
-//                }
-//                i--;
-//            }
         }
         return best.move;
     }
 
 
-    Move checkEndGameCornerCases(final Board board, Move bestMove) {
+    private Move checkEndGameCornerCases(final Board board, Move bestMove) {
         //
         // Map our moves by type
         //
@@ -282,7 +270,6 @@ public class Minimax implements AIMoveSelector, Closeable {
                         startDepth < 4) {
 
                     // Extend the depth and search again for a game ending move
-                    int origDepth = startDepth;
                     startDepth = 4;
                     printMsg("Looking for game-ending moves...");
 
@@ -293,7 +280,6 @@ public class Minimax implements AIMoveSelector, Closeable {
 
                     // We have (at minimum) a queen or a rook along with our king so we should
                     // be able to back them into a corner if we search even further ahead..
-                    int origDepth = startDepth;
                     startDepth = 4;
                     printMsg("Looking even further for a game ending move..");
                 }
@@ -317,7 +303,7 @@ public class Minimax implements AIMoveSelector, Closeable {
         return movesByPiece;
     }
 
-    public int minmax(final Board board, int alpha, int beta, int depth, boolean maximize) {
+    int minmax(final Board board, int alpha, int beta, int depth, boolean maximize) {
         int value = maximize ? Piece.MIN_VALUE : Piece.MAX_VALUE;
 
         if (depth <= 0) {
@@ -381,7 +367,7 @@ public class Minimax implements AIMoveSelector, Closeable {
 
     // Called when our context is being destroyed
     @Override
-    public void close() throws IOException {
+    public void close() {
         // Disable new tasks from being submitted
         pool.shutdown();
 //        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
