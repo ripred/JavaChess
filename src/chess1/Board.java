@@ -132,7 +132,7 @@ public class Board {
     /**
      * @return Returns the list of spots on the board for the current game state.
      */
-    List<Spot> getBoard() {
+    public List<Spot> getBoard() {
         return board;
     }
 
