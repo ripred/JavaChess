@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.function.Consumer;
 
+
 class MyCallback implements Consumer<String> {
     static Board board;
     static AIMoveSelector agent;
@@ -43,48 +44,90 @@ public class Main {
         System.loadLibrary("native");
     }
 
+    static Minimax moveAgent = null;
 
     public static void main(String[] args) {
+
+        final int depth = 7;
+//        final int maxSeconds = 7 * 60;
+        final int maxSeconds = 30;
+        moveAgent = new Minimax(depth, maxSeconds);
+
+
         SignalHandler sigHandler = sig -> {
             // handle SIGINT
 
-            // Reset display attributes
-            System.out.print("\r" + resetAll);
+            if (moveAgent != null) {
+                try {
+                    // Reset display attributes
+                    System.out.print("\r" + resetAll);
+                    // clear display to end of line
+                    System.out.print("\r" + clearEOL);
+                    // Turn the cursor on
+                    System.out.println(cursOn);
 
-            // clear display to end of line
-            System.out.print("\r" + clearEOL);
+                    System.out.println("Max threads used at once: " + moveAgent.getMaxThreads());
 
-            // Turn the cursor on
-            System.out.println(cursOn);
+                    moveAgent.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    moveAgent.pool = null;
+                    moveAgent = null;
 
-            System.out.println("Goodbye");
-            exit(0);
+                    System.out.println("Goodbye");
+                    System.exit(0);
+                }
+            }
+
+            System.exit(0);
         };
-        Signal.handle(new Signal("INT"), sigHandler);
+
+        try {
+            Signal.handle(new Signal("INT"), sigHandler);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
 
         // call our C++ code just for fun: 😎
         new Main().CGateway();
 
         final boolean isHuman = false;
 
-
-
         while (true) {
-            playGame(isHuman);
+            playGame(moveAgent, isHuman);
             if (!isHuman) {
-                try { while (System.in.available() > 0) System.in.readAllBytes(); }
-                catch (IOException e) { e.printStackTrace(); }
-                print("New game starts in 5 seconds - press any key to exit...");
-                for (int i=0; i < 500; ++i) {
-                    try {
-                        try { if (System.in.available() > 0) break; }
-                        catch (IOException e) { e.printStackTrace(); }
-                    Thread.sleep(10); }
-                    catch (InterruptedException e) { e.printStackTrace(); }
+                try {
+                    while (System.in.available() > 0) System.in.readAllBytes();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                try { if (System.in.available() > 0) break; }
-                catch (IOException e) { e.printStackTrace(); }
+                print("New game starts in 5 seconds - press any key to exit...");
+                for (int i = 0; i < 500; ++i) {
+                    try {
+                        try {
+                            if (System.in.available() > 0) break;
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                try {
+                    if (System.in.available() > 0) break;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
+            System.out.print(Ansi.cursPos(1, 12));
+            System.out.println(clearEOL);
+            System.out.println(clearEOL);
+            System.out.println(clearEOL);
+            System.out.println(clearEOL);
+            System.out.println(clearEOL);
         }
 
         print();
@@ -92,17 +135,23 @@ public class Main {
 
         // Turn the cursor on
         System.out.print(cursOn);
+
+        if (moveAgent != null) {
+            try {
+                moveAgent.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                moveAgent.pool = null;
+                moveAgent = null;
+            }
+        }
     }
 
-    private static void playGame(final boolean isHuman) {
-        for (int i = 0; i < 25; ++i) {
-            System.out.println();
-        }
+    private static void playGame(Minimax moveAgent, final boolean isHuman) {
+        System.out.println("\n".repeat(20));
 
-        final int depth = 4;
-        final int maxSeconds = 10 * 60;
         final Board board = new Board(1);
-        final Minimax moveAgent = new Minimax(depth, maxSeconds);
 
         final MyCallback callback = new MyCallback(board, moveAgent);
         moveAgent.registerDisplayCallback(callback);
@@ -113,7 +162,7 @@ public class Main {
         final int maxRepetitions = 3;
         boolean drawByRepetition = false;
         long gameTime = System.nanoTime();
-        ;
+
         long startTime;
         Move move;
 
@@ -242,65 +291,6 @@ public class Main {
         }
         seconds = (int) totalTime;
         print(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, seconds));
-    }
-
-    private static void testAnsi() {
-        String csi = new String(new byte[]{0x1b, '['});
-        String fg = csi + "38:5:";
-        String bg = csi + "48:5:";
-        int loop, i;
-
-        // Standard and high-intensity colors
-        for (i = 0; i < 16; ++i) {
-            String out = csi + (i < 8 ? "97m" : "30m") + bg + i + "m" + String.format("%6d   ", i);
-            System.out.print(out);
-        }
-        print(csi + "0m");
-
-        // 216 colors
-        for (loop = 0, i = 16; i < 232; ++i) {
-            String out = csi + ((loop % 36) < (18) ? "97m" : "30m") + bg + i + "m" + String.format("%3d ", i);
-            System.out.print(out);
-            if ((++loop) % 36 == 0) System.out.println(csi + "40m");
-        }
-
-        // Grayscale colors
-        for (loop = 0, i = 232; i < 256; ++i) {
-            String out = csi + ((loop) < (12) ? "97m" : "30m") + bg + i + "m" + String.format("%4d  ", i);
-            System.out.print(out);
-            loop++;
-        }
-        print(csi + "0m");
-
-        // 24-bit colors
-        final int redStep = 48;
-        final int greenStep = 32;
-        final int blueStep = 16;
-        for (int r = 0; r < 256; r += redStep) {
-            for (int g = 0; g < 256; g += greenStep) {
-                for (int b = 0; b < 256; b += blueStep) {
-                    String fg24 = csi + "38;2;";
-                    String bg24 = csi + "48;2;";
-                    double brightness = sqrt((r * g) + (g * b) + (b * r));
-                    String contrastFg = csi + ((brightness >= 192.0) ? "30m" : "97m");
-                    String out = (contrastFg)
-                            + (bg24 + (g) + ";" + (b) + ";" + (r) + "m")
-                            + String.format("%02X%02X%02X ", r, g, b);
-                    System.out.print(out);
-                }
-                print(csi + "0m");
-            }
-        }
-        print();
-
-        print(csi + "1m Bold             Rendition" + csi + "0m");
-        print(csi + "2m Faint            Rendition" + csi + "0m");
-        print(csi + "4m Underline        Rendition" + csi + "0m");
-        print(csi + "22m Neither          Rendition" + csi + "0m");
-        print(csi + "7m Reverse Video    Rendition" + csi + "0m");
-        print(csi + "9m Crossed Out      Rendition" + csi + "0m");
-
-        print();
     }
 
     private static void print() {
@@ -527,7 +517,6 @@ public class Main {
 //        final String[] charSetUnicodeBlack = {"?","♙","♘","♗","♖","♕","♔"};
 //        final boolean useUnicode = true;
 
-
         // The screen row to begin displaying on
         int topRow = 1;
 
@@ -648,7 +637,18 @@ public class Main {
             System.out.print(clearEOL); // clear display to end of line
         }
         System.out.println();
-        System.out.println();
+
+        List<Move> checkMoves = board.kingInCheck(board, board.getTurn());
+        if (checkMoves.size() > 0) {
+            Move move = checkMoves.get(0);
+            System.out.print((board.getTurn() == Side.Black) ? "Black" : "White");
+            System.out.print(" is in check from ");
+            System.out.println(String.format("%c%d",
+                    move.getFromCol() + 'a',
+                    8 - move.getFromRow()));
+        } else {
+            System.out.println(clearEOL);
+        }
 
         for (int row=0; row < 8; ++row) {
             System.out.print(" " + (8-row) + " ");
