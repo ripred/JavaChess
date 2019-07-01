@@ -31,12 +31,12 @@ import sun.misc.SignalHandler;
 import static java.lang.Math.abs;
 
 class MyCallback implements Consumer<String> {
-    static Board board;
-    static AIMoveSelector agent;
+    private static Board board;
+    private static AIMoveSelector agent;
 
     MyCallback(Board board, AIMoveSelector agent) {
-        this.board = board;
-        this.agent = agent;
+        MyCallback.board = board;
+        MyCallback.agent = agent;
     }
 
     @Override
@@ -288,7 +288,7 @@ public class Main {
 
         int hours = 0;
         int minutes = 0;
-        int seconds = 0;
+        int seconds;
         long totalTime = (System.nanoTime() - gameTime) / 1_000_000_000L;
         while (totalTime >= 60 * 60) {
             hours++;
