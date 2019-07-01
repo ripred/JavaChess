@@ -133,10 +133,6 @@ public class Minimax extends AIMoveSelector {
         for (Move move : board.getCurrentPlayerMoves()) {
             // If we are past our allowed time then return the best move so far
             if (maxSeconds > 0 && System.nanoTime() >= stopNanos) {
-//                printMsg(String.format("Time out for side %d.  Stop time = %d, clock time is %d",
-//                        board.getTurn(),
-//                        stopNanos,
-//                        System.nanoTime()));
                 break;
             }
 
@@ -163,13 +159,6 @@ public class Minimax extends AIMoveSelector {
                 System.out.println("\nWe're having problems waiting for move threads to finish..\n");
                 e.printStackTrace();
             }
-
-//            printMsg(String.format("%s side, maximize = %b, %3d threads left of %3d,  Best so far: %s",
-//                    ((board.getTurn() == Side.White) ? "White" : "Black"),
-//                    maximize,
-//                    numThreads - i,
-//                    numThreads,
-//                    best.toString()));
 
             if (threadResult != null && threadResult.endMoveFound) {
                 best.move = threadResult.best.move;
@@ -353,9 +342,6 @@ public class Minimax extends AIMoveSelector {
 
             // If we are out of time then return the best outcome we've seen this move accomplish
             if (maxSeconds > 0 && System.nanoTime() >= stopNanos) {
-//                Thread.currentThread().interrupt();
-//                printMsg(String.format("Time out for side %d.  Stop time = %d, clock time is %d",
-//                        board.getTurn(), stopNanos, System.nanoTime()));
                 break;
             }
 
@@ -371,12 +357,6 @@ public class Minimax extends AIMoveSelector {
     public void close() {
         // Disable new tasks from being submitted
         pool.shutdown();
-//        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-//        int i = stack.length;
-//        while (--i >= 0) {
-//            StackTraceElement st = stack[i];
-//            System.out.println(st.toString());
-//        }
 
         try {
             // Wait a while for existing tasks to terminate
