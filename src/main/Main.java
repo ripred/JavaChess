@@ -167,7 +167,6 @@ public class Main {
 
         final int humanSide = Side.White;
 
-        boolean showHistory = false;
         final int maxRepetitions = 3;
         boolean drawByRepetition = false;
         long gameTime = System.nanoTime();
@@ -468,7 +467,7 @@ public class Main {
         return false;
     }
 
-    public static void show(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
+    static void show(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
 //        final String[] charSetAscii = {"?","p","k","b","r","q","k"};
 //        final String tmpWhitePawn = "♟";
         final String[] charSetUnicodeWhite = {"?","♙","♞","♝","♜","♛","♚"};
