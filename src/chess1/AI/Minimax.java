@@ -37,9 +37,9 @@ import java.util.Map;
  *
  */
 public class Minimax extends AIMoveSelector {
-    private final Object processedLock = new Object();
-    private static ExecutorService pool = Executors.newFixedThreadPool(100);
+    private ExecutorService pool = Executors.newFixedThreadPool(threadPoolSize);
     private final BoardEvaluator evaluator = new PieceValuesPlusPos();
+    private final Object processedLock = new Object();
     private Consumer<String> callback;
     private Integer movesProcessed;
     private long maxSeconds;

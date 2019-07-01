@@ -8,10 +8,10 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 public abstract class AIMoveSelector implements Closeable {
-    private int maxThreads;
+    protected int threadPoolSize;
 
     public AIMoveSelector(int maxThreads) {
-        this.maxThreads = maxThreads;
+        threadPoolSize = maxThreads;
     }
 
     public abstract Move bestMove(final Board board);
