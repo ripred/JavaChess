@@ -1,4 +1,7 @@
-package chess1;
+package chess1.AI;
+
+import chess1.Move;
+import chess1.Piece;
 
 /**
  * The BestMove objects are a transparent structure to have places to keep

@@ -1,4 +1,6 @@
-package chess1;
+package chess1.AI;
+
+import chess1.Board;
 
 /**
  * The BoardEvaluator interface has one method: evaluate()

@@ -1,9 +1,14 @@
-package chess1;
+package chess1.AI;
+
+import chess1.Board;
+import chess1.Move;
+import chess1.Piece;
+import chess1.Side;
+import chess1.Spot;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.io.IOException;
@@ -60,65 +65,6 @@ public class Minimax implements AIMoveSelector, Closeable {
         return maxThreads;
     }
 
-    /**
-     * The LookAheadMoveThread objects are what is launched for each move the current player has.
-     * They implement the minimax algorithm as well as the alpha-beta pruning.  They have timeouts
-     * and will return the best move they've seen so far if it expires.
-     *
-     */
-    private class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
-        BestMove best;
-        boolean endMoveFound;
-        boolean maximize;
-        Board board;
-        int depth;
-        Move move;
-
-        LookAheadMoveThread(final Board board, boolean maximize, final Move move, int depth) {
-            this.best = new BestMove(maximize);
-            this.maximize = maximize;
-            this.depth = depth;
-            this.move = move;
-            this.endMoveFound = false;
-
-            this.board = new Board(board);
-            this.board.executeMove(move);
-            this.board.advanceTurn();
-            synchronized (processedLock) {
-                ++movesProcessed;
-            }
-
-            // See if that move left the other player with no moves and return it if so:
-            endMoveFound = this.board.getCurrentPlayerMoves().isEmpty();
-            if (endMoveFound) {
-                best.move = move;
-                best.value = evaluator.evaluate(this.board);
-            }
-        }
-
-        // This call is made to us when we are launched
-        @Override
-        public LookAheadMoveThread call() {
-            if (endMoveFound) {
-                return this;
-            }
-
-            Thread.yield();
-
-            int lookAheadVal = minmax(board, Piece.MIN_VALUE, Piece.MAX_VALUE,
-                    depth - 1, !maximize);
-
-            if (maximize && lookAheadVal >= best.value) {
-                best.value = lookAheadVal;
-                best.move = move;
-            } else if (!maximize && lookAheadVal <= best.value) {
-                best.value = lookAheadVal;
-                best.move = move;
-            }
-            return this;
-        }
-    }
-
     public Minimax(final int depth, final int maxSeconds) {
         this.maxSeconds = maxSeconds;
         this.startDepth = depth;
@@ -130,9 +76,19 @@ public class Minimax implements AIMoveSelector, Closeable {
     @Override
     public int getNumMovesExamined() {
         synchronized (processedLock) {
-            int result = movesProcessed;
-            return result;
+            return movesProcessed;
         }
+    }
+
+    @Override
+    public void addNumMovesExamined(int n) {
+        synchronized (processedLock) {
+            movesProcessed += n;
+        }
+    }
+
+    public int evaluate(final Board board) {
+        return evaluator.evaluate(board);
     }
 
     public void setDepth(int n) {
@@ -142,7 +98,6 @@ public class Minimax implements AIMoveSelector, Closeable {
     public int getDepth() {
         return startDepth;
     }
-
 
     /**
      * Implementation of the bestMove() function of the
@@ -186,7 +141,7 @@ public class Minimax implements AIMoveSelector, Closeable {
                 break;
             }
 
-            LookAheadMoveThread lookAheadThread = new LookAheadMoveThread(board, maximize, move, startDepth);
+            LookAheadMoveThread lookAheadThread = new LookAheadMoveThread(board, this, maximize, move, startDepth);
             if (lookAheadThread.endMoveFound) {
                 best.move = lookAheadThread.best.move;
                 best.value = lookAheadThread.best.value;
@@ -362,7 +317,7 @@ public class Minimax implements AIMoveSelector, Closeable {
         return movesByPiece;
     }
 
-    private int minmax(final Board board, int alpha, int beta, int depth, boolean maximize) {
+    public int minmax(final Board board, int alpha, int beta, int depth, boolean maximize) {
         int value = maximize ? Piece.MIN_VALUE : Piece.MAX_VALUE;
 
         if (depth <= 0) {

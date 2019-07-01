@@ -1,4 +1,7 @@
-package chess1;
+package chess1.AI;
+
+import chess1.Board;
+import chess1.Side;
 
 /**
  * The TotalMoveCounts class is an implementation of the

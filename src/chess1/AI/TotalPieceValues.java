@@ -1,4 +1,9 @@
-package chess1;
+package chess1.AI;
+
+import chess1.Board;
+import chess1.Piece;
+import chess1.Side;
+import chess1.Spot;
 
 /**
  * The TotalPieceValues class is an implementation of the
