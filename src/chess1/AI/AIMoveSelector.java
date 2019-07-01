@@ -7,17 +7,23 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-public interface AIMoveSelector extends Closeable {
-    Move bestMove(final Board board);
+public abstract class AIMoveSelector implements Closeable {
+    private int maxThreads;
 
-    int getNumMovesExamined();
-    void addNumMovesExamined(int n);
+    public AIMoveSelector(int maxThreads) {
+        this.maxThreads = maxThreads;
+    }
 
-    int getMaxThreads();
+    public abstract Move bestMove(final Board board);
 
-    void registerDisplayCallback(Consumer<String> cb);
+    public abstract int getNumMovesExamined();
+    public abstract void addNumMovesExamined(int n);
+
+    public abstract int getMaxThreads();
+
+    public abstract void registerDisplayCallback(Consumer<String> cb);
 
     @Override
-    void close() throws IOException;
+    public abstract void close() throws IOException;
 }
 
