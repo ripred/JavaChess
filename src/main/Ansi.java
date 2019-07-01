@@ -72,6 +72,39 @@ public class Ansi {
     public static String cursPos(int col, int row) { return CSI + row+";"+col+"f"; }
 
 
+    //////////////////////////////////////////////////////////
+    // Merge two color strings into single (foreground or background) color average of the two:
+    public static String mergeColors24(String clr1, String clr2, final boolean fore) {
+        String[] parts1 = clr1.split(";");
+        String[] parts2 = clr2.split(";");
+
+        int r1 = Integer.valueOf(parts1[2]);
+        int g1 = Integer.valueOf(parts1[3]);
+        int b1 = Integer.valueOf(parts1[4].substring(0, parts1[4].length() - 1));
+
+        int r2 = Integer.valueOf(parts2[2]);
+        int g2 = Integer.valueOf(parts2[3]);
+        int b2 = Integer.valueOf(parts2[4].substring(0, parts2[4].length() - 1));
+
+        double pr1 = (double) r1 / 256.0;
+        double pg1 = (double) g1 / 256.0;
+        double pb1 = (double) b1 / 256.0;
+
+        double pr2 = (double) r2 / 256.0;
+        double pg2 = (double) g2 / 256.0;
+        double pb2 = (double) b2 / 256.0;
+
+        double r3 = ((pr1 + pr2) / 2.0);
+        double g3 = ((pg1 + pg2) / 2.0);
+        double b3 = ((pb1 + pb2) / 2.0);
+
+        if (fore) {
+            return fg24b((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
+        } else {
+            return bg24b((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
+        }
+    }
+
 
 
     private static void testAnsi() {
