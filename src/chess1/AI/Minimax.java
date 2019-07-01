@@ -36,7 +36,7 @@ import java.util.Map;
  * Minimax algorithm overview: https://en.wikipedia.org/wiki/Minimax
  *
  */
-public class Minimax implements AIMoveSelector, Closeable {
+public class Minimax extends AIMoveSelector {
     private final Object processedLock = new Object();
     private static ExecutorService pool = Executors.newFixedThreadPool(100);
     private final BoardEvaluator evaluator = new PieceValuesPlusPos();
@@ -63,7 +63,8 @@ public class Minimax implements AIMoveSelector, Closeable {
         return maxThreads;
     }
 
-    public Minimax(final int depth, final int maxSeconds) {
+    public Minimax(int maxThreads, int depth, int maxSeconds) {
+        super(maxThreads);
         this.maxSeconds = maxSeconds;
         this.startDepth = depth;
         this.movesProcessed = 0;
