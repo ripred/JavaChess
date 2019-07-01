@@ -39,7 +39,7 @@ public class ChessConfig {
 
         humanPlayer = Boolean.valueOf(props.getProperty("humanPlayer", "false"));
         maxThreads = Integer.valueOf(props.getProperty("maxThreads", "100"));
-        maxDepth = Integer.valueOf(props.getProperty("aiPlyDepth", "5"));
+        maxDepth = Integer.valueOf(props.getProperty("aiPlyDepth", "6"));
         maxSeconds = Integer.valueOf(props.getProperty("maxAISeconds", "30"));
 
         showTargetPaths = Boolean.valueOf(props.getProperty("showTargets", "true"));
