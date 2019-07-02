@@ -12,6 +12,9 @@ public class ChessConfig {
     private String configFilePath;
     private Properties props;
 
+    // General Game Settings:
+    public int     maxDrawReps;         // number of repeated moves to call draw
+
     // AI Settings:
     public boolean humanPlayer;         // human player 1 if true
     public int     maxThreads;          // maximum number of threads in thread pool
@@ -63,6 +66,8 @@ public class ChessConfig {
         // Populate values with the various config values (properties)
         // from the file and set a default value for each one if it is missing
 
+        maxDrawReps = Integer.valueOf(props.getProperty("numDrawReps", "3"));
+
         humanPlayer = Boolean.valueOf(props.getProperty("humanPlayer", "false"));
         maxThreads = Integer.valueOf(props.getProperty("maxThreads", "100"));
         maxDepth = Integer.valueOf(props.getProperty("aiPlyDepth", "6"));
@@ -94,6 +99,8 @@ public class ChessConfig {
 
     public boolean saveConfiguration() {
         // update old values
+        props.setProperty("numDrawReps", String.valueOf(maxDrawReps));
+
         props.setProperty("humanPlayer", String.valueOf(humanPlayer));
         props.setProperty("maxThreads", String.valueOf(maxThreads));
         props.setProperty("aiPlyDepth", String.valueOf(maxDepth));
@@ -131,6 +138,8 @@ public class ChessConfig {
             String usage = "\n"
                     + " Usage:\n"
                     + " \n"
+                    + " numDrawReps         number of repeated moves to call game a draw\n"
+                    + " \n"
                     + " humanPlayer:        set to true to play as player 1 (white)\n"
                     + " maxThreads:         maximum number of threads for AI to run simultaneously\n"
                     + " aiPlyDepth:         maximum number of moves for AI to look ahead\n"
@@ -157,7 +166,7 @@ public class ChessConfig {
                     + " \n"
                     + " targetsShade        color influence for target positions\n"
                     + " victimsShade        color influence for victim positions\n"
-                    + " \n"
+                    + "\n"
                     ;
 
             props.store(writer, usage);
