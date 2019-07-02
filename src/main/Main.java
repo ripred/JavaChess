@@ -377,7 +377,8 @@ public class Main {
             if (!types.contains(start.getType()))
                 continue;
 
-//            if (move.getValue() == 0) continue;
+            boolean showCapturesOnly = config.showCapturesOnly;
+            if (showCapturesOnly && move.getValue() == 0) continue;
 
             List<Spot> spots = new ArrayList<>();
             int deltaX;
