@@ -656,7 +656,8 @@ public class Main {
     private static String getTurnPrompt(Board board) {
         return String.format("%d: %s's Turn: ",
                 board.getNumTurns(),
-                (board.getTurn() == Side.White) ? "White" : "Black");
+                (board.getTurn() == Side.White) ? "White" : "Black")
+                + clearEOL;
     }
 
     private static String posString(int col, int row) {
