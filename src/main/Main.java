@@ -281,7 +281,10 @@ public class Main {
         String stat3 = "";
 
         if (startTime != 0) {
-            stat1 = String.format("    Time spent:      %,10d seconds", timeSpent);
+            stat1 = String.format("    Time spent:      %,10ds%s",
+                    timeSpent,
+                    (timeSpent == config.maxSeconds) ? " (hit cfg limit)" : "");
+            stat1 += clearEOL;
             stat2 = String.format("    Moves examined:  %,10d", numProcessed);
             stat3 = String.format("    (per second):    %,10d", numPerSec);
         }
