@@ -6,13 +6,13 @@ import chess1.Piece;
 import chess1.Side;
 import chess1.Spot;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.ArrayList;
-import java.io.Closeable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,7 +110,7 @@ public class Minimax extends AIMoveSelector {
         final int side = board.getTurn();
         final boolean maximize = (side == Side.White);
         int numMoves = board.getCurrentPlayerMoves().size();
-        final BestMove best = new BestMove(maximize);
+        BestMove best = new BestMove(maximize);
 
         movesProcessed = 0;
         stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
@@ -137,9 +137,8 @@ public class Minimax extends AIMoveSelector {
             }
 
             LookAheadMoveThread lookAheadThread = new LookAheadMoveThread(board, this, maximize, move, startDepth);
-            if (lookAheadThread.endMoveFound) {
-                best.move = lookAheadThread.best.move;
-                best.value = lookAheadThread.best.value;
+            if (lookAheadThread.foundEndMove()) {
+                best = lookAheadThread.getBestMove();
                 break;
             }
 
@@ -160,9 +159,8 @@ public class Minimax extends AIMoveSelector {
                 e.printStackTrace();
             }
 
-            if (threadResult != null && threadResult.endMoveFound) {
-                best.move = threadResult.best.move;
-                best.value = threadResult.best.value;
+            if (threadResult != null && threadResult.foundEndMove()) {
+                best = threadResult.getBestMove();
 
                 for (int k = i + 1; k < numThreads; ++k) {
                     lookAheadThreads[k].cancel(true);
@@ -173,12 +171,10 @@ public class Minimax extends AIMoveSelector {
             Thread.yield();
 
             if (threadResult != null) {
-                if (maximize && threadResult.best.value >= best.value) {
-                    best.value = threadResult.best.value;
-                    best.move = threadResult.best.move;
-                } else if (!maximize && threadResult.best.value <= best.value) {
-                    best.value = threadResult.best.value;
-                    best.move = threadResult.move;
+                if (maximize && threadResult.getBestMove().value >= best.value) {
+                    best = threadResult.getBestMove();
+                } else if (!maximize && threadResult.getBestMove().value <= best.value) {
+                    best = threadResult.getBestMove();
                 }
             }
 
@@ -354,7 +350,7 @@ public class Minimax extends AIMoveSelector {
 
     // Called when our context is being destroyed
     @Override
-    public void close() {
+    public void close() throws IOException {
         // Disable new tasks from being submitted
         pool.shutdown();
 
@@ -363,6 +359,7 @@ public class Minimax extends AIMoveSelector {
             if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
                 // Cancel currently executing tasks
                 pool.shutdownNow();
+
                 // Wait a while for tasks to respond to being cancelled
                 if (!pool.awaitTermination(60, TimeUnit.SECONDS))
                     System.err.println("some look-ahead threads did not terminate");
@@ -370,6 +367,7 @@ public class Minimax extends AIMoveSelector {
         } catch (InterruptedException ie) {
             // (Re-)Cancel if current thread also interrupted
             pool.shutdownNow();
+
             // Preserve interrupt status
             Thread.currentThread().interrupt();
         }
