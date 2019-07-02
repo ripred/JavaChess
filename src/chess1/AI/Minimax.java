@@ -17,18 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// TODO:
-//    Implement the use of:
-//    ✓ An ExecutorService
-//    ✓ A ThreadPool manager
-//    ✓ use the Callable interface instead of the Runnable
-//      interface because it allows values to be passed back
-//      from the threads (instead of the hack I have now of
-//      throwing them all in an Object List)
-//    - To get messages back from the threads while they
-//      are running use PipeReader and PipeWriter instead
-//      of the hack I have now using a Consumer<T>
-
 /**
  *
  * Implementation of the Minimax algorithm with alpha-beta pruning.
