@@ -13,13 +13,13 @@ import java.util.concurrent.Callable;
  *
  */
 public class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
-    boolean endMoveFound;
-    boolean maximize;
-    Minimax minimax;
-    BestMove best;
-    Board board;
-    int depth;
-    Move move;
+    private boolean maximize;
+    private Minimax minimax;
+    private Board board;
+    private int depth;
+    private Move move;
+    private boolean endMoveFound;
+    private BestMove best;
 
     LookAheadMoveThread(final Board board, final Minimax minimax, boolean maximize, final Move move, int depth) {
         this.best = new BestMove(maximize);
@@ -40,6 +40,14 @@ public class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
             best.move = move;
             best.value = minimax.evaluate(this.board);
         }
+    }
+
+    boolean foundEndMove() {
+        return endMoveFound;
+    }
+
+    BestMove getBestMove() {
+        return best;
     }
 
     // This call is made to us when we are launched
