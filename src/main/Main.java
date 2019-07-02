@@ -41,7 +41,7 @@ class MyCallback implements Consumer<String> {
 
     @Override
     public void accept(String s) {
-        Main.show(board, s, agent, 0);
+        Main.showBoard(board, s, agent, 0);
     }
 }
 
@@ -59,7 +59,7 @@ public class Main {
 
     private static ChessConfig config;
 
-    private static void onExit() {
+    private static void onAppExit() {
         if (moveAgent != null) {
             try {
                 // Reset display attributes
@@ -99,7 +99,7 @@ public class Main {
         SignalHandler sigHandler = sig -> {
             // handle SIGINT
 
-            onExit();
+            onAppExit();
             System.exit(0);
         };
 
@@ -117,7 +117,7 @@ public class Main {
 
         playGame(moveAgent, isHuman);
 
-        onExit();
+        onAppExit();
     }
 
     private static void playGame(AIMoveSelector moveAgent, final boolean isHuman) {
@@ -125,22 +125,22 @@ public class Main {
 
         final Board board = new Board(1);
 
+        final int maxRepetitions = 3;
+        board.setMaxAllowedRepetitions(maxRepetitions);
+
         final MyCallback callback = new MyCallback(board, moveAgent);
         moveAgent.registerDisplayCallback(callback);
 
         final int humanSide = Side.White;
 
-        final int maxRepetitions = 3;
-        boolean drawByRepetition = false;
         long gameTime = System.nanoTime();
-
-        long startTime;
+        long startTime = gameTime;
         Move move;
 
 //        board.initTest();
 
         print();
-        show(board, null, moveAgent, 0);
+        showBoard(board, null, moveAgent, 0);
 
         String prompt = getTurnPrompt(board);
         System.out.print(prompt);
@@ -158,15 +158,14 @@ public class Main {
 
             board.executeMove(move);
             if (board.kingInCheck(board, board.getTurn()).size() > 0) {
-                print("Internal error.  Somehow we moved into check!");
+                print("Internal error.  Somehow we allowed a move that put us in check!");
             }
             board.advanceTurn();
             print();
-            show(board, moveDesc, moveAgent, startTime);
+            showBoard(board, moveDesc, moveAgent, startTime);
 
             // Check for draw-by-repetition (same made too many times in a row by a player)
-            drawByRepetition = board.checkDrawByRepetition(maxRepetitions);
-            if (drawByRepetition) {
+            if (board.checkDrawByRepetition()) {
                 break;
             }
 
@@ -182,14 +181,19 @@ public class Main {
             }
         }
 
-        if (drawByRepetition) {
+        showGameSummary(board);
+        showTotalGameTime(gameTime);
+    }
+
+    private static void showGameSummary(final Board board) {
+        if (board.checkDrawByRepetition()) {
             Move lastMove = board.getLastMove();
             print(String.format("Draw by-repetition!  Move from %c%d to %c%d made %d time in a row!",
                     lastMove.getFromCol() + 'a',
                     8 - lastMove.getFromRow(),
                     lastMove.getToCol() + 'a',
                     8 - lastMove.getToRow(),
-                    maxRepetitions));
+                    board.getMaxAllowedRepetitions()));
         }
 
         List<Move> checkMateBlack = board.kingInCheck(board, Side.Black);
@@ -227,11 +231,13 @@ public class Main {
                 print("Stalemate!  White Wins!");
             }
         }
+    }
 
+    private static void showTotalGameTime(long startTime) {
         int hours = 0;
         int minutes = 0;
         int seconds;
-        long totalTime = (System.nanoTime() - gameTime) / 1_000_000_000L;
+        long totalTime = (System.nanoTime() - startTime) / 1_000_000_000L;
         while (totalTime >= 60 * 60) {
             hours++;
             totalTime -= 60 * 60;
@@ -244,194 +250,7 @@ public class Main {
         print(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, seconds));
     }
 
-    private static void print() {
-        System.out.println();
-    }
-    private static void print(String s) {
-        System.out.println(s);
-    }
-    private static String getPieceName(final int type) {
-        switch (type) {
-            case Piece.Empty:
-                return "Empty";
-            case Piece.Pawn:
-                return "Pawn";
-            case Piece.Knight:
-                return "Knight";
-            case Piece.Bishop:
-                return "Bishop";
-            case Piece.Rook:
-                return "Rook";
-            case Piece.Queen:
-                return "Queen";
-            case Piece.King:
-                return "King";
-            default:
-                return "Unknown";
-        }
-    }
-    private static String getTurnPrompt(Board board) {
-        return String.format("%d: %s's Turn: ",
-                board.getNumTurns(),
-                (board.getTurn() == Side.White) ? "White" : "Black");
-    }
-    private static String getMoveDesc(final Board board, final Move move) {
-        StringBuilder sb = new StringBuilder();
-
-        if (move != null) {
-            Spot from = board.getSpot(move.getFromCol(), move.getFromRow());
-            Spot to = board.getSpot(move.getToCol(), move.getToRow());
-            int type = from.getType();
-            String pieceName = getPieceName(type);
-            String cap = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
-            boolean isCastle = type == Piece.King
-                    && (move.getFromCol() - move.getToCol() == 2 || move.getFromCol() - move.getToCol() == -2);
-
-            if (isCastle) {
-                if (from.getCol() == 4) {
-                    sb.append("Castle on king's side. ");
-                } else {
-                    sb.append("Castle on queen's side. ");
-                }
-            } else {
-                sb.append(String.format("%s from %c%d to %c%d%s. ",
-                        pieceName,
-                        move.getFromCol() + 'A',
-                        8 - move.getFromRow(),
-                        move.getToCol() + 'A',
-                        8 - move.getToRow(),
-                        cap));
-            }
-        }
-
-        Board board1 = new Board(board);
-        board1.executeMove(move);
-
-        if (board1.kingInCheck(board1, board1.getTurn()).size() > 0) {
-            if (board1.getTurn() == Side.Black) {
-                sb.append("White is in check! ");
-            } else {
-                sb.append("Black is in check! ");
-            }
-        }
-
-        return sb.toString();
-    }
-    private static Move getHumanMove(final Board board) {
-        String prompt = "Enter your move (ex: a2 a3): ";
-        String response;
-
-        // Turn the cursor on
-        System.out.print(cursOn);
-
-        while (true) {
-            System.out.print(prompt);
-            Scanner input = new Scanner(System.in);
-            response = input.nextLine();
-
-            if (response.length() < 5) {
-                System.out.println("Invalid format.");
-                continue;
-            }
-
-            response = response.toLowerCase();
-            String[] parts = response.split(" ");
-            if (parts.length < 2) {
-                System.out.println("Invalid format.");
-                continue;
-            }
-
-            int col1 = parts[0].charAt(0) - 'a';
-            int col2 = parts[1].charAt(0) - 'a';
-            int row1 = 8 - Integer.valueOf(parts[0].substring(1));
-            int row2 = 8 - Integer.valueOf(parts[1].substring(1));
-
-            for (Move m:board.getCurrentPlayerMoves()) {
-                if (m.getFromCol() == col1 && m.getFromRow() == row1
-                    && m.getToCol() == col2 && m.getToRow() == row2) {
-                    Spot spot = board.getSpot(col2, row2);
-                    int value = spot.isEmpty() ? 0 : Piece.values[spot.getType()];
-                    return new Move(col1, row1, col2, row2, value);
-                }
-            }
-            System.out.println("That is not a legal move.");
-        }
-    }
-
-    private static Map<Move, List<Spot>> createTargetMap(final Board board, final int side, List<Integer> types) {
-        // ====================================================================
-        // create a map of the current player moves which could
-        // take an opponent piece
-        Map<Move, List<Spot>> targets = new HashMap<>();
-
-        List<Move> ourMoves;
-
-        if (side == board.getTurn()) {
-            ourMoves = board.getCurrentPlayerMoves();
-        } else {
-            ourMoves = board.getMovesSorted(side);
-        }
-
-        for (Move move:ourMoves) {
-            Spot start = board.getSpot(move.getFromCol(), move.getFromRow());
-            if (!types.contains(start.getType()))
-                continue;
-
-            boolean showCapturesOnly = config.showCapturesOnly;
-            if (showCapturesOnly && move.getValue() == 0) continue;
-
-            List<Spot> spots = new ArrayList<>();
-            int deltaX;
-            int deltaY;
-            int curX = start.getCol();
-            int curY = start.getRow();
-            int toCol = move.getToCol();
-            int toRow = move.getToRow();
-
-            switch (start.getType()) {
-                // Single out the pieces that capture using only a
-                // destination and not a path of spots to it...
-                case Piece.Pawn:
-                case Piece.Knight:
-                case Piece.King:
-                    spots.add(new Spot(board.getSpot(toCol, toRow)));
-                    targets.put(move, spots);
-                    break;
-                case Piece.Rook:
-                case Piece.Bishop:
-                case Piece.Queen:
-                    deltaX = move.getToCol() - move.getFromCol();
-                    deltaY = move.getToRow() - move.getFromRow();
-                    deltaX = Integer.min(1, Integer.max(deltaX, -1));
-                    deltaY = Integer.min(1, Integer.max(deltaY, -1));
-                    do {
-                        curX += deltaX;
-                        curY += deltaY;
-                        Spot next = new Spot(start.getSide(), start.getType(), curX, curY);
-                        spots.add(next);
-                    } while (curX != toCol || curY != toRow);
-                    targets.put(move, spots);
-                    break;
-                default:
-                    assert false : "We should not get here!! ?";
-                    break;
-            }
-        }
-        return targets;
-    }
-    private static boolean isSpotATarget(final Map<Move, List<Spot>> targets, final int col, final int row) {
-        for (Move move:targets.keySet()) {
-            List<Spot> path = targets.get(move);
-            for (Spot spot:path) {
-                if (spot.getCol() == col && spot.getRow() == row) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    static void show(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
+    static void showBoard(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
 //        final String[] charSetAscii = {"?","p","k","b","r","q","k"};
 //        final String tmpWhitePawn = "♟";
         final String[] charSetUnicodeWhite = {"?","♙","♞","♝","♜","♛","♚"};
@@ -602,10 +421,10 @@ public class Main {
                 }
 
                 if (type == Piece.King
-                    && board.getTurn() == spot.getSide()
-                    && board.kingInCheck(board, board.getTurn()).size() > 0) {
-                        fmtClrFore = (spot.getSide() == Side.Black ? blkCheck : whtCheck);
-                        fmtAttr = boldAttr;
+                        && board.getTurn() == spot.getSide()
+                        && board.kingInCheck(board, board.getTurn()).size() > 0) {
+                    fmtClrFore = (spot.getSide() == Side.Black ? blkCheck : whtCheck);
+                    fmtAttr = boldAttr;
                 }
 
                 String clrTake = (blkSq ? blkTakePath : whtTakePath);
@@ -666,5 +485,194 @@ public class Main {
         System.out.println("    A  B  C  D  E  F  G  H ");
         print();
     }
+
+    private static Map<Move, List<Spot>> createTargetMap(final Board board, final int side, List<Integer> types) {
+        // ====================================================================
+        // create a map of the current player moves which could
+        // take an opponent piece
+        Map<Move, List<Spot>> targets = new HashMap<>();
+
+        List<Move> ourMoves;
+
+        if (side == board.getTurn()) {
+            ourMoves = board.getCurrentPlayerMoves();
+        } else {
+            ourMoves = board.getMovesSorted(side);
+        }
+
+        for (Move move:ourMoves) {
+            Spot start = board.getSpot(move.getFromCol(), move.getFromRow());
+            if (!types.contains(start.getType()))
+                continue;
+
+            boolean showCapturesOnly = config.showCapturesOnly;
+            if (showCapturesOnly && move.getValue() == 0) continue;
+
+            List<Spot> spots = new ArrayList<>();
+            int deltaX;
+            int deltaY;
+            int curX = start.getCol();
+            int curY = start.getRow();
+            int toCol = move.getToCol();
+            int toRow = move.getToRow();
+
+            switch (start.getType()) {
+                // Single out the pieces that capture using only a
+                // destination and not a path of spots to it...
+                case Piece.Pawn:
+                case Piece.Knight:
+                case Piece.King:
+                    spots.add(new Spot(board.getSpot(toCol, toRow)));
+                    targets.put(move, spots);
+                    break;
+                case Piece.Rook:
+                case Piece.Bishop:
+                case Piece.Queen:
+                    deltaX = move.getToCol() - move.getFromCol();
+                    deltaY = move.getToRow() - move.getFromRow();
+                    deltaX = Integer.min(1, Integer.max(deltaX, -1));
+                    deltaY = Integer.min(1, Integer.max(deltaY, -1));
+                    do {
+                        curX += deltaX;
+                        curY += deltaY;
+                        Spot next = new Spot(start.getSide(), start.getType(), curX, curY);
+                        spots.add(next);
+                    } while (curX != toCol || curY != toRow);
+                    targets.put(move, spots);
+                    break;
+                default:
+                    assert false : "We should not get here!! ?";
+                    break;
+            }
+        }
+        return targets;
+    }
+    private static boolean isSpotATarget(final Map<Move, List<Spot>> targets, final int col, final int row) {
+        for (Move move:targets.keySet()) {
+            List<Spot> path = targets.get(move);
+            for (Spot spot:path) {
+                if (spot.getCol() == col && spot.getRow() == row) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static String getMoveDesc(final Board board, final Move move) {
+        StringBuilder sb = new StringBuilder();
+
+        if (move != null) {
+            Spot from = board.getSpot(move.getFromCol(), move.getFromRow());
+            Spot to = board.getSpot(move.getToCol(), move.getToRow());
+            int type = from.getType();
+            String pieceName = getPieceName(type);
+            String cap = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
+            boolean isCastle = type == Piece.King
+                    && (move.getFromCol() - move.getToCol() == 2 || move.getFromCol() - move.getToCol() == -2);
+
+            if (isCastle) {
+                if (from.getCol() == 4) {
+                    sb.append("Castle on king's side. ");
+                } else {
+                    sb.append("Castle on queen's side. ");
+                }
+            } else {
+                sb.append(String.format("%s from %c%d to %c%d%s. ",
+                        pieceName,
+                        move.getFromCol() + 'A',
+                        8 - move.getFromRow(),
+                        move.getToCol() + 'A',
+                        8 - move.getToRow(),
+                        cap));
+            }
+        }
+
+        Board board1 = new Board(board);
+        board1.executeMove(move);
+
+        if (board1.kingInCheck(board1, board1.getTurn()).size() > 0) {
+            if (board1.getTurn() == Side.Black) {
+                sb.append("White is in check! ");
+            } else {
+                sb.append("Black is in check! ");
+            }
+        }
+
+        return sb.toString();
+    }
+    private static String getPieceName(final int type) {
+        switch (type) {
+            case Piece.Empty:
+                return "Empty";
+            case Piece.Pawn:
+                return "Pawn";
+            case Piece.Knight:
+                return "Knight";
+            case Piece.Bishop:
+                return "Bishop";
+            case Piece.Rook:
+                return "Rook";
+            case Piece.Queen:
+                return "Queen";
+            case Piece.King:
+                return "King";
+            default:
+                return "Unknown";
+        }
+    }
+    private static String getTurnPrompt(Board board) {
+        return String.format("%d: %s's Turn: ",
+                board.getNumTurns(),
+                (board.getTurn() == Side.White) ? "White" : "Black");
+    }
+
+    private static void print() {
+        System.out.println();
+    }
+    private static void print(String s) {
+        System.out.println(s);
+    }
+    private static Move getHumanMove(final Board board) {
+        String prompt = "Enter your move (ex: a2 a3): ";
+        String response;
+
+        // Turn the cursor on
+        System.out.print(cursOn);
+
+        while (true) {
+            System.out.print(prompt);
+            Scanner input = new Scanner(System.in);
+            response = input.nextLine();
+
+            if (response.length() < 5) {
+                System.out.println("Invalid format.");
+                continue;
+            }
+
+            response = response.toLowerCase();
+            String[] parts = response.split(" ");
+            if (parts.length < 2) {
+                System.out.println("Invalid format.");
+                continue;
+            }
+
+            int col1 = parts[0].charAt(0) - 'a';
+            int col2 = parts[1].charAt(0) - 'a';
+            int row1 = 8 - Integer.valueOf(parts[0].substring(1));
+            int row2 = 8 - Integer.valueOf(parts[1].substring(1));
+
+            for (Move m:board.getCurrentPlayerMoves()) {
+                if (m.getFromCol() == col1 && m.getFromRow() == row1
+                    && m.getToCol() == col2 && m.getToRow() == row2) {
+                    Spot spot = board.getSpot(col2, row2);
+                    int value = spot.isEmpty() ? 0 : Piece.values[spot.getType()];
+                    return new Move(col1, row1, col2, row2, value);
+                }
+            }
+            System.out.println("That is not a legal move.");
+        }
+    }
+
 }
 
