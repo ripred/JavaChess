@@ -109,7 +109,6 @@ public class Main {
             e.printStackTrace();
         }
 
-
         // call our C++ code just for fun: 😎
 //        new Main().CGateway();
 
@@ -259,35 +258,55 @@ public class Main {
         int topRow = 1;
 
         // The background colors of the squares
-        final String blkBack  = bg24b(142, 142, 142);
-        final String whtBack  = bg24b(204, 204, 204);
+        String blkBack  = bg24b(142, 142, 142);
+        String whtBack  = bg24b(204, 204, 204);
 
         // The colors of the pieces
-        final String blkForeB = fg24b( 64,  64,  64);
-        final String blkForeW = fg24b(  0,   0,   0);
-        final String whtForeB = fg24b(255, 255, 255);
-        final String whtForeW = fg24b(255, 255, 255);
+        String blkForeB = fg24b( 64,  64,  64);
+        String blkForeW = fg24b(  0,   0,   0);
+        String whtForeB = fg24b(255, 255, 255);
+        String whtForeW = fg24b(255, 255, 255);
 
         // The colors of the last moved piece
-        final String blkMoved = fg24b( 128,   0,  0);
-        final String whtMoved = fg24b( 192, 192,  0);
+        String blkMoved = fg24b( 128,   0,  0);
+        String whtMoved = fg24b( 192, 192,  0);
 
         // The colors of the kings in check
-        final String blkCheck = fg24b( 192, 128,  0);
-        final String whtCheck = fg24b( 192, 128,  0);
+        String blkCheck = fg24b( 192, 128,  0);
+        String whtCheck = fg24b( 192, 128,  0);
+
+        // The color influences on victim and target positions
+        String targetsShade = bg24b(  0,    0, 64);
+        String victimsShade = bg24b(  64,   0,   0);
+
+        // Override with user-config values if valid:
+        blkBack = cfgBg("blkBack", blkBack);
+        whtBack = cfgBg("whtBack", whtBack);
+
+        blkForeB = cfgFg("blkForeB", blkForeB);
+        blkForeW = cfgFg("blkForeW", blkForeW);
+        whtForeB = cfgFg("whtForeB", whtForeB);
+        whtForeW = cfgFg("whtForeW", whtForeW);
+
+        blkMoved = cfgFg("blkMoved", blkMoved);
+        whtMoved = cfgFg("whtMoved", whtMoved);
+
+        blkCheck = cfgFg("blkCheck", blkCheck);
+        whtCheck = cfgFg("whtCheck", whtCheck);
+
+        targetsShade = cfgBg("targetsShade", targetsShade);
+        victimsShade = cfgBg("victimsShade", victimsShade);
 
         // The colors of paths to opponent pieces that we can take
         // current player moves tends towards blues
         //
-        final String blueInfluence = bg24b(  0,    0, 64);
-        final String blkTakePath = mergeColors24(blueInfluence, blkBack, false);
-        final String whtTakePath = mergeColors24(blueInfluence, whtBack, false);
+        final String blkTakePath = mergeColors24(targetsShade, blkBack, false);
+        final String whtTakePath = mergeColors24(targetsShade, whtBack, false);
 
         // The colors of opponent paths to our pieces that they can take
         // opponent moves tends towards reds
-        final String redInfluence = bg24b(  64,   0,   0);
-        final String blkGivePath = mergeColors24(redInfluence, blkBack, false);
-        final String whtGivePath = mergeColors24(redInfluence, whtBack, false);
+        final String blkGivePath = mergeColors24(victimsShade, blkBack, false);
+        final String whtGivePath = mergeColors24(victimsShade, whtBack, false);
 
         final long timeSpent = (System.nanoTime() - startTime) / 1_000_000_000L;
         final int numProcessed = agent.getNumMovesExamined();
@@ -332,7 +351,7 @@ public class Main {
 
         int otherSide = board.getTurn() == Side.Black ? Side.White :Side.Black;
 
-        // get a maps of pieces under attack
+        // get maps of pieces under attack for both sides
         List<Integer> showOurTypes = new ArrayList<>();
         int[] ourTypes = {
                 Piece.Pawn,
@@ -480,6 +499,28 @@ public class Main {
         }
         System.out.println("    A  B  C  D  E  F  G  H ");
         print();
+    }
+
+    private static String cfgBg(final String key, final String def) {
+        Integer[] cfgRGB = cfgClrStrToAnsi(key);
+        return (cfgRGB.length == 3) ? bg24b(cfgRGB[0], cfgRGB[1], cfgRGB[2]) : def;
+    }
+
+    private static String cfgFg(final String key, final String def) {
+        Integer[] cfgRGB = cfgClrStrToAnsi(key);
+        return (cfgRGB.length == 3) ? fg24b(cfgRGB[0], cfgRGB[1], cfgRGB[2]) : def;
+    }
+
+    private static Integer[] cfgClrStrToAnsi(final String cfgStr) {
+        String[] parts = cfgStr.split(",");
+        if (parts.length < 3) {
+            return new Integer[] {};
+        } else {
+            return new Integer[] {
+                    Integer.valueOf(parts[0].trim()),
+                    Integer.valueOf(parts[1].trim()),
+                    Integer.valueOf(parts[2].trim())};
+        }
     }
 
     private static Map<Move, List<Spot>> createTargetMap(final Board board, final int side, List<Integer> types) {
