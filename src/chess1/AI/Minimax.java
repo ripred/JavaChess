@@ -134,6 +134,7 @@ public class Minimax extends AIMoveSelector {
             lookAheadThreads[numThreads++] = task;
             maxThreads = Integer.max(maxThreads, numThreads);
             Thread t = new Thread(task);
+            t.setPriority(Thread.MIN_PRIORITY);
             t.start();
         }
 
@@ -159,9 +160,9 @@ public class Minimax extends AIMoveSelector {
             Thread.yield();
 
             if (threadResult != null) {
-                if (maximize && threadResult.getBestMove().value >= best.value) {
+                if (maximize && threadResult.getBestMove().value > best.value) {
                     best = threadResult.getBestMove();
-                } else if (!maximize && threadResult.getBestMove().value <= best.value) {
+                } else if (!maximize && threadResult.getBestMove().value < best.value) {
                     best = threadResult.getBestMove();
                 }
             }
@@ -307,7 +308,7 @@ public class Minimax extends AIMoveSelector {
             // The minimax step
             // While we have the depth keep looking ahead to see what this move accomplishes
             int lookAheadValue = minmax(currentBoard, alpha, beta, depth - 1, !maximize);
-            if ((!maximize && lookAheadValue <= value) || (maximize && lookAheadValue >= value)) {
+            if ((!maximize && lookAheadValue < value) || (maximize && lookAheadValue > value)) {
                 value = lookAheadValue;
             }
 
