@@ -30,13 +30,13 @@ import sun.misc.SignalHandler;
 
 import static java.lang.Math.abs;
 
-class MyCallback implements Consumer<String> {
+class ThreadMsgConsumer implements Consumer<String> {
     private static Board board;
     private static AIMoveSelector agent;
 
-    MyCallback(Board board, AIMoveSelector agent) {
-        MyCallback.board = board;
-        MyCallback.agent = agent;
+    ThreadMsgConsumer(Board board, AIMoveSelector agent) {
+        ThreadMsgConsumer.board = board;
+        ThreadMsgConsumer.agent = agent;
     }
 
     @Override
@@ -128,7 +128,7 @@ public class Main {
         final int maxRepetitions = 3;
         board.setMaxAllowedRepetitions(maxRepetitions);
 
-        final MyCallback callback = new MyCallback(board, moveAgent);
+        final ThreadMsgConsumer callback = new ThreadMsgConsumer(board, moveAgent);
         moveAgent.registerDisplayCallback(callback);
 
         final int humanSide = Side.White;
