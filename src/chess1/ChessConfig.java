@@ -5,6 +5,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
 
+import static main.Ansi.bg24b;
+import static main.Ansi.fg24b;
+
 public class ChessConfig {
     private String configFilePath;
     private Properties props;
@@ -19,6 +22,28 @@ public class ChessConfig {
     public boolean showTargetPaths;     // color the board to show opponents possible moves if true
     public boolean showVictimPaths;     // color the board to show current players possible moves if true
     public boolean showCapturesOnly;    // limit board coloring to only show possible captures if true
+
+    // The  colors of the background squares
+    public String blkBack;
+    public String whtBack;
+
+    // The colors of the pieces
+    public String blkForeB;
+    public String blkForeW;
+    public String whtForeB;
+    public String whtForeW;
+
+    // The colors of the last moved piece
+    public String blkMoved;
+    public String whtMoved;
+
+    // The colors of the kings in check
+    public String blkCheck;
+    public String whtCheck;
+
+    // The color influences on victim and target positions
+    public String targetsShade;
+    public String victimsShade;
 
     public ChessConfig(final String filename) {
         configFilePath = filename;
@@ -47,6 +72,23 @@ public class ChessConfig {
         showVictimPaths = Boolean.valueOf(props.getProperty("showVictims", "true"));
         showCapturesOnly = Boolean.valueOf(props.getProperty("showCapturesOnly", "true"));
 
+        blkBack  = props.getProperty("blkBack", "142, 142, 142");
+        whtBack  = props.getProperty("whtBack", "204, 204, 204");
+
+        blkForeB = props.getProperty("blkForeB", "64, 64, 64");
+        blkForeW = props.getProperty("blkForeW", "0, 0, 0");
+        whtForeB = props.getProperty("whtForeB", "255, 255, 255");
+        whtForeW = props.getProperty("whtForeW", "255, 255, 255");
+
+        blkMoved = props.getProperty("blkMoved", "128, 0, 0");
+        whtMoved = props.getProperty("whtMoved", "192, 192, 0");
+
+        blkCheck = props.getProperty("blkCheck", "192, 128, 0");
+        whtCheck = props.getProperty("whtCheck", "192, 128, 0");
+
+        targetsShade = props.getProperty("targetsShade", "0, 0, 64");
+        victimsShade = props.getProperty("victimsShade", "64, 0, 0");
+
         return fileMissing;
     }
 
@@ -60,6 +102,27 @@ public class ChessConfig {
         props.setProperty("showTargets", String.valueOf(showTargetPaths));
         props.setProperty("showVictims", String.valueOf(showVictimPaths));
         props.setProperty("showCapturesOnly", String.valueOf(showCapturesOnly));
+
+        props.setProperty("blkBack", blkBack);
+        props.setProperty("whtBack", whtBack);
+
+        // The colors of the pieces
+        props.setProperty("blkForeB", blkForeB);
+        props.setProperty("blkForeW", blkForeW);
+        props.setProperty("whtForeB", whtForeB);
+        props.setProperty("whtForeW", whtForeW);
+
+        // The colors of the last moved piece
+        props.setProperty("blkMoved", blkMoved);
+        props.setProperty("whtMoved", whtMoved);
+
+        // The colors of the kings in check
+        props.setProperty("blkCheck", blkCheck);
+        props.setProperty("whtCheck", whtCheck);
+
+        // The color influences on victim and target positions
+        props.setProperty("targetsShade", targetsShade);
+        props.setProperty("victimsShade", victimsShade);
 
         boolean successful = true;
         try {
@@ -75,6 +138,26 @@ public class ChessConfig {
                     + " showVictims:        color the board to show current players possible moves if true\n"
                     + " showTargets:        color the board to show opponents possible moves if true\n"
                     + " showCapturesOnly:   limit board coloring to only show possible captures if true\n"
+                    + " \n"
+                    + " ANSI Colors:\n"
+                    + " blkBack             background color for dark squares\n"
+                    + " whtBack             background color for light squares\n"
+                    + " \n"
+                    + " blkForeB            foreground color for black piece on dark square\n"
+                    + " blkForeW            foreground color for black piece on light square\n"
+                    + " \n"
+                    + " whtForeB            foreground color for white piece on dark square\n"
+                    + " whtForeW            foreground color for white piece on light square\n"
+                    + " \n"
+                    + " blkMoved            foreground color for last moved black piece\n"
+                    + " whtMoved            foreground color for last moved white piece\n"
+                    + " \n"
+                    + " blkCheck            foreground color for black king in check\n"
+                    + " whtCheck            foreground color for white king in check\n"
+                    + " \n"
+                    + " targetsShade        color influence for target positions\n"
+                    + " victimsShade        color influence for victim positions\n"
+                    + " \n"
                     ;
 
             props.store(writer, usage);
