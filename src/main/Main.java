@@ -94,7 +94,6 @@ public class Main {
         config.loadConfiguration();
 
         final int depth = config.maxDepth;
-//        final int maxSeconds = 7 * 60;
         final int maxSeconds = config.maxSeconds;
         final int maxThreads = config.maxThreads;
 
@@ -119,40 +118,7 @@ public class Main {
 
         final boolean isHuman = config.humanPlayer;
 
-        while (true) {
-            playGame(moveAgent, isHuman);
-            if (!isHuman) {
-                try {
-                    while (System.in.available() > 0) System.in.readAllBytes();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                print("New game starts in 5 seconds - press any key to exit...");
-                for (int i = 0; i < 500; ++i) {
-                    try {
-                        try {
-                            if (System.in.available() > 0) break;
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                try {
-                    if (System.in.available() > 0) break;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            System.out.print(Ansi.cursPos(1, 12));
-            System.out.println(clearEOL);
-            System.out.println(clearEOL);
-            System.out.println(clearEOL);
-            System.out.println(clearEOL);
-            System.out.println(clearEOL);
-        }
+        playGame(moveAgent, isHuman);
 
         onExit();
     }
