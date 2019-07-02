@@ -134,7 +134,7 @@ public class ChessConfig {
                     + " humanPlayer:        set to true to play as player 1 (white)\n"
                     + " maxThreads:         maximum number of threads for AI to run simultaneously\n"
                     + " aiPlyDepth:         maximum number of moves for AI to look ahead\n"
-                    + " maxAISeconds:       maximum number of seconds to allow AI to think\n"
+                    + " maxAISeconds:       maximum number of seconds to allow AI to think (0 for no time limit)\n"
                     + " showVictims:        color the board to show current players possible moves if true\n"
                     + " showTargets:        color the board to show opponents possible moves if true\n"
                     + " showCapturesOnly:   limit board coloring to only show possible captures if true\n"
