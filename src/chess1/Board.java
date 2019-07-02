@@ -17,6 +17,7 @@ public class Board {
     private int turn;
     private int passes;
     private Move lastMove;
+    private int maxAllowedRepetitions;
 
     /**
      * The default constructor for a Board object.
@@ -90,8 +91,9 @@ public class Board {
         putPiece(Piece.Rook,   Side.White, 7, 7);
 
         passes = 1;
-        lastMove = new Move(-1, -1, -1, -1, -1);
         turn = Side.White;
+        maxAllowedRepetitions = 3;
+        lastMove = new Move(-1, -1, -1, -1, -1);
         piecesTaken0 = new ArrayList<>();
         piecesTaken1 = new ArrayList<>();
         moveHistory = new ArrayList<>();
@@ -112,8 +114,9 @@ public class Board {
         getSpot(2, 6).setMoved(true);
 
         passes = 1;
-        lastMove = new Move(-1, -1, -1, -1, -1);
         turn = Side.White;
+        maxAllowedRepetitions = 3;
+        lastMove = new Move(-1, -1, -1, -1, -1);
         piecesTaken0 = new ArrayList<>();
         piecesTaken1 = new ArrayList<>();
         moveHistory = new ArrayList<>();
@@ -150,6 +153,14 @@ public class Board {
         return new Move(lastMove);
     }
 
+    public int getMaxAllowedRepetitions() {
+        return maxAllowedRepetitions;
+    }
+
+    public void setMaxAllowedRepetitions(int maxRepetitions) {
+        maxAllowedRepetitions = maxRepetitions;
+    }
+
     int getVerbose() { return verbose; }
 
     public final List<Integer> getPiecesTaken0() {
@@ -172,12 +183,13 @@ public class Board {
         return list;
     }
 
-    public boolean checkDrawByRepetition(final int maxRepetitions) {
+    public boolean checkDrawByRepetition() {
         // Check for draw-by-repetition (same made too many times in a row by a player)
         List<Move> history = getMoveHistory();
-        return history.size() >= Math.pow(2.0, (float) maxRepetitions + 1)
+        return history.size() >= Math.pow(2.0, (float) maxAllowedRepetitions + 1)
                 && Collections.frequency(
-                history.subList(history.size() - (int) Math.pow(2.0, (float) maxRepetitions + 1), history.size()), getLastMove()) >= maxRepetitions;
+                history.subList(history.size() - (int) Math.pow(2.0, (float) maxAllowedRepetitions + 1), history.size()),
+                getLastMove()) >= maxAllowedRepetitions;
     }
 
     public boolean checkDrawByRepetition(final Move move, final int maxRepetitions) {
