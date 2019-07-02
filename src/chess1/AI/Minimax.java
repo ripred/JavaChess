@@ -181,7 +181,7 @@ public class Minimax extends AIMoveSelector {
         // If we are getting repetitive and possibly stuck at a local maxima then
         // see if we have any possible pawn advances available and pick one
         // of those instead
-        if (bestMove != null && board.checkDrawByRepetition(bestMove, 5)) {
+        if (bestMove != null && board.checkDrawByRepetition(bestMove, board.getMaxAllowedRepetitions())) {
             printMsg("Attempting to end repetition..");
 
             if (ourMoveMap.get(Piece.Pawn).size() > 0) {
@@ -241,20 +241,20 @@ public class Minimax extends AIMoveSelector {
                 if (ourMoveMap.get(Piece.Queen).size() > 0 &&
                         ourMoveMap.get(Piece.Rook).size() > 0 &&
                         ourMoveMap.get(Piece.King).size() > 0 &&
-                        startDepth < 4) {
+                        startDepth < 6) {
 
                     // Extend the depth and search again for a game ending move
-                    startDepth = 4;
+                    startDepth = 6;
                     printMsg("Looking for game-ending moves...");
 
                 } else if ((ourMoveMap.get(Piece.Queen).size() > 0)
                         || (ourMoveMap.get(Piece.Rook).size() > 0) &&
                         ourMoveMap.get(Piece.King).size() > 0 &&
-                        startDepth < 4) {
+                        startDepth < 7) {
 
                     // We have (at minimum) a queen or a rook along with our king so we should
                     // be able to back them into a corner if we search even further ahead..
-                    startDepth = 4;
+                    startDepth = 7;
                     printMsg("Looking even further for a game ending move..");
                 }
             }
