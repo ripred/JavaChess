@@ -272,7 +272,7 @@ public class Main {
         }
         final String takenMsg0 = sb.toString();
 
-        final String stat0 = String.format("    Board value:         %,7d : %s's favor",
+        final String stat0 = String.format("    Board value:        %,7d : %s's favor",
                 abs(value), ((value < 0) ? "Black" : ((value == 0) ? "No one" : "White")));
 
         String stat1 = "";
@@ -486,19 +486,12 @@ public class Main {
         }
     }
     private static void showTotalGameTime(long startTime) {
-        int hours = 0;
-        int minutes = 0;
-        int seconds;
         long totalTime = (System.nanoTime() - startTime) / 1_000_000_000L;
-        while (totalTime >= 60 * 60) {
-            hours++;
-            totalTime -= 60 * 60;
-        }
-        while (totalTime >= 60) {
-            minutes++;
-            totalTime -= 60;
-        }
-        seconds = (int) totalTime;
+        int hours = (int)(totalTime / 3600L);
+        totalTime -= hours * 3600L;
+        int minutes = (int)(totalTime / 60L);
+        totalTime -= minutes * 60L;
+        int seconds = (int) totalTime;
         print(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, seconds));
     }
 

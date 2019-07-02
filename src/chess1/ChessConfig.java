@@ -166,8 +166,7 @@ public class ChessConfig {
                     + " \n"
                     + " targetsShade        color influence for target positions\n"
                     + " victimsShade        color influence for victim positions\n"
-                    + "\n"
-                    ;
+                    + "\n";
 
             props.store(writer, usage);
         } catch (IOException e) {
