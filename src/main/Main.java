@@ -280,22 +280,22 @@ public class Main {
         String victimsShade = bg24b(  64,   0,   0);
 
         // Override with user-config values if valid:
-        blkBack = cfgBg("blkBack", blkBack);
-        whtBack = cfgBg("whtBack", whtBack);
+        blkBack = cfgBg(config.blkBack, blkBack);
+        whtBack = cfgBg(config.whtBack, whtBack);
 
-        blkForeB = cfgFg("blkForeB", blkForeB);
-        blkForeW = cfgFg("blkForeW", blkForeW);
-        whtForeB = cfgFg("whtForeB", whtForeB);
-        whtForeW = cfgFg("whtForeW", whtForeW);
+        blkForeB = cfgFg(config.blkForeB, blkForeB);
+        blkForeW = cfgFg(config.blkForeW, blkForeW);
+        whtForeB = cfgFg(config.whtForeB, whtForeB);
+        whtForeW = cfgFg(config.whtForeW, whtForeW);
 
-        blkMoved = cfgFg("blkMoved", blkMoved);
-        whtMoved = cfgFg("whtMoved", whtMoved);
+        blkMoved = cfgFg(config.blkMoved, blkMoved);
+        whtMoved = cfgFg(config.whtMoved, whtMoved);
 
-        blkCheck = cfgFg("blkCheck", blkCheck);
-        whtCheck = cfgFg("whtCheck", whtCheck);
+        blkCheck = cfgFg(config.blkCheck, blkCheck);
+        whtCheck = cfgFg(config.whtCheck, whtCheck);
 
-        targetsShade = cfgBg("targetsShade", targetsShade);
-        victimsShade = cfgBg("victimsShade", victimsShade);
+        targetsShade = cfgBg(config.targetsShade, targetsShade);
+        victimsShade = cfgBg(config.victimsShade, victimsShade);
 
         // The colors of paths to opponent pieces that we can take
         // current player moves tends towards blues
