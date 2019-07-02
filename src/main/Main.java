@@ -48,13 +48,12 @@ class MyCallback implements Consumer<String> {
 
 public class Main {
 
-    // Playing with JNI !
+    // Example of using JNI to call C++ code
     //
-    public native void CGateway();
-
-    static {
-        System.loadLibrary("native");
-    }
+//    public native void CGateway();
+//    static {
+//        System.loadLibrary("native");
+//    }
 
     private static AIMoveSelector moveAgent = null;
 
@@ -71,8 +70,6 @@ public class Main {
 
                 // Turn the cursor back on
                 System.out.println(cursOn);
-
-                System.out.println("Max threads used at once: " + moveAgent.getMaxThreads());
 
                 moveAgent.close();
             } catch (IOException e) {
@@ -114,7 +111,7 @@ public class Main {
 
 
         // call our C++ code just for fun: 😎
-        new Main().CGateway();
+//        new Main().CGateway();
 
         final boolean isHuman = config.humanPlayer;
 
