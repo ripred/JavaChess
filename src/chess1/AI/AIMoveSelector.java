@@ -8,9 +8,9 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 public abstract class AIMoveSelector implements Closeable {
-    protected int threadPoolSize;
+    int threadPoolSize;
 
-    public AIMoveSelector(int maxThreads) {
+    AIMoveSelector(int maxThreads) {
         threadPoolSize = maxThreads;
     }
 
