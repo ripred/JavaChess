@@ -78,31 +78,19 @@ public class Ansi {
         String[] parts1 = clr1.split(";");
         String[] parts2 = clr2.split(";");
 
-        int r1 = Integer.valueOf(parts1[2]);
-        int g1 = Integer.valueOf(parts1[3]);
-        int b1 = Integer.valueOf(parts1[4].substring(0, parts1[4].length() - 1));
+        float r1 = Float.valueOf(parts1[2]);
+        float g1 = Float.valueOf(parts1[3]);
+        float b1 = Float.valueOf(parts1[4].substring(0, parts1[4].length() - 1));
 
-        int r2 = Integer.valueOf(parts2[2]);
-        int g2 = Integer.valueOf(parts2[3]);
-        int b2 = Integer.valueOf(parts2[4].substring(0, parts2[4].length() - 1));
+        float r2 = Float.valueOf(parts2[2]);
+        float g2 = Float.valueOf(parts2[3]);
+        float b2 = Float.valueOf(parts2[4].substring(0, parts2[4].length() - 1));
 
-        double pr1 = (double) r1 / 256.0;
-        double pg1 = (double) g1 / 256.0;
-        double pb1 = (double) b1 / 256.0;
+        int r = (int)((((r1 / 256.0f) + (r2 / 256.0f)) / 2.0) * 256.0);
+        int g = (int)((((g1 / 256.0f) + (g2 / 256.0f)) / 2.0) * 256.0);
+        int b = (int)((((b1 / 256.0f) + (b2 / 256.0f)) / 2.0) * 256.0);
 
-        double pr2 = (double) r2 / 256.0;
-        double pg2 = (double) g2 / 256.0;
-        double pb2 = (double) b2 / 256.0;
-
-        double r3 = ((pr1 + pr2) / 2.0);
-        double g3 = ((pg1 + pg2) / 2.0);
-        double b3 = ((pb1 + pb2) / 2.0);
-
-        if (fore) {
-            return fg24b((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
-        } else {
-            return bg24b((int)(r3 * 256.0), (int)(g3 * 256.0), (int)(b3 * 256.0));
-        }
+        return fore ? fg24b(r, g, b) : bg24b(r, g, b);
     }
 
 
