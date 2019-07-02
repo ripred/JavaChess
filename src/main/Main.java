@@ -325,9 +325,9 @@ public class Main {
         String stat3 = "";
 
         if (startTime != 0) {
-            stat1 = String.format("    Time Spent:       %,10d seconds", timeSpent);
-            stat2 = String.format("    Moves examined:   %,10d", numProcessed);
-            stat3 = String.format("    Moves per second: %,10d", numPerSec);
+            stat1 = String.format("    Time spent:      %,10d seconds", timeSpent);
+            stat2 = String.format("    Moves examined:  %,10d", numProcessed);
+            stat3 = String.format("    (per second):    %,10d", numPerSec);
         }
 
         int otherSide = board.getTurn() == Side.Black ? Side.White :Side.Black;
@@ -431,25 +431,25 @@ public class Main {
 
                 boolean showTargets = config.showTargetPaths;
                 boolean showVictims = config.showVictimPaths;
-                boolean keepPerspective = board.getTurn() == Side.Black;
+                boolean flipPerspective = board.getTurn() == Side.Black;
 
                 if (spotIsTarget && !spotIsVictim) {
                     if (showTargets) {
-                        if (keepPerspective)
+                        if (flipPerspective)
                             fmtClrBack = clrGive;
                         else
                             fmtClrBack = clrTake;
                     }
                 } else if (!spotIsTarget && spotIsVictim) {
                     if (showVictims) {
-                        if (keepPerspective)
+                        if (flipPerspective)
                             fmtClrBack = clrTake;
                         else
                             fmtClrBack = clrGive;
                     }
                 } else if (spotIsTarget && spotIsVictim) {
                     if (showTargets || showVictims) {
-                        if (keepPerspective)
+                        if (flipPerspective)
                             fmtClrBack = mergeColors24(clrGive, clrTake, false);
                         else
                             fmtClrBack = mergeColors24(clrTake, clrGive, false);
