@@ -601,7 +601,7 @@ public class Main {
             Spot to = board.getSpot(move.getToCol(), move.getToRow());
             int type = from.getType();
             String pieceName = getPieceName(type);
-            String cap = to.isEmpty() ? "" : "capturing " + getPieceName(to.getType());
+            String cap = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
             boolean isCastle = type == Piece.King
                     && (move.getFromCol() - move.getToCol() == 2 || move.getFromCol() - move.getToCol() == -2);
 
@@ -612,7 +612,7 @@ public class Main {
                     sb.append("Castle on queen's side. ");
                 }
             } else {
-                sb.append(String.format("%s from %s to %s %s. ",
+                sb.append(String.format("%s from %s to %s%s. ",
                         pieceName,
                         posString(move.getFromCol(), move.getFromRow()),
                         posString(move.getToCol(), move.getToRow()),
