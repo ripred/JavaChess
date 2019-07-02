@@ -10,14 +10,15 @@ public class ChessConfig {
     private Properties props;
 
     // AI Settings:
-    public boolean humanPlayer;     // human player 1 if true
-    public int     maxThreads;      // maximum number of threads in thread pool
-    public int     maxSeconds;      // maximum number of seconds AI player is allowed per move
-    public int     maxDepth;        // maximum ply depth AI searches ahead
+    public boolean humanPlayer;         // human player 1 if true
+    public int     maxThreads;          // maximum number of threads in thread pool
+    public int     maxSeconds;          // maximum number of seconds AI player is allowed per move
+    public int     maxDepth;            // maximum ply depth AI searches ahead
 
     // Interface Settings:
-    public boolean showTargetPaths; // enable or disable displaying opponent pieces in check by current player
-    public boolean showVictimPaths; // enable or disable displaying current player pieces in check by opponent
+    public boolean showTargetPaths;     // color the board to show opponents possible moves if true
+    public boolean showVictimPaths;     // color the board to show current players possible moves if true
+    public boolean showCapturesOnly;    // limit board coloring to only show possible captures if true
 
     public ChessConfig(final String filename) {
         configFilePath = filename;
@@ -44,6 +45,7 @@ public class ChessConfig {
 
         showTargetPaths = Boolean.valueOf(props.getProperty("showTargets", "true"));
         showVictimPaths = Boolean.valueOf(props.getProperty("showVictims", "true"));
+        showCapturesOnly = Boolean.valueOf(props.getProperty("showCapturesOnly", "true"));
 
         return fileMissing;
     }
@@ -57,11 +59,25 @@ public class ChessConfig {
 
         props.setProperty("showTargets", String.valueOf(showTargetPaths));
         props.setProperty("showVictims", String.valueOf(showVictimPaths));
+        props.setProperty("showCapturesOnly", String.valueOf(showCapturesOnly));
 
         boolean successful = true;
         try {
             FileWriter writer = new FileWriter(configFilePath);
-            props.store(writer, null);
+
+            String usage = "\n"
+                    + " Usage:\n"
+                    + " \n"
+                    + " humanPlayer:        set to true to play as player 1 (white)\n"
+                    + " maxThreads:         maximum number of threads for AI to run simultaneously\n"
+                    + " aiPlyDepth:         maximum number of moves for AI to look ahead\n"
+                    + " maxAISeconds:       maximum number of seconds to allow AI to think\n"
+                    + " showVictims:        color the board to show current players possible moves if true\n"
+                    + " showTargets:        color the board to show opponents possible moves if true\n"
+                    + " showCapturesOnly:   limit board coloring to only show possible captures if true\n"
+                    ;
+
+            props.store(writer, usage);
         } catch (IOException e) {
             successful = false;
         }
