@@ -184,69 +184,6 @@ public class Main {
         showTotalGameTime(gameTime);
     }
 
-    private static void showGameSummary(final Board board) {
-        if (board.checkDrawByRepetition()) {
-            Move lastMove = board.getLastMove();
-            print(String.format("Draw by-repetition!  Move from %s to %s made %d times in a row!",
-                    posString(lastMove.getFromCol(), lastMove.getFromRow()),
-                    posString(lastMove.getToCol(), lastMove.getToRow()),
-                    board.getMaxAllowedRepetitions()));
-        }
-
-        List<Move> checkMateBlack = board.kingInCheck(board, Side.Black);
-        List<Move> checkMateWhite = board.kingInCheck(board, Side.White);
-        int numMoveBlack = board.getMoves(0, true).size();
-        int numMoveWhite = board.getMoves(1, true).size();
-
-        assert numMoveBlack > 0 || numMoveWhite > 0 : "Internal error: Both players have 0 moves";
-
-        if (checkMateBlack.size() > 0 && checkMateWhite.size() > 0) {
-            print("Internal error: Both players are in check");
-            print("White King in check from:");
-            for (Move m:checkMateWhite)
-                print("    " + m.toString());
-            print();
-
-            print("Black King in check from:");
-            for (Move m:checkMateBlack)
-                print("    " + m.toString());
-            print();
-        }
-
-        print();
-
-        if (numMoveWhite == 0) {
-            if (checkMateWhite.size() > 0) {
-                print("Checkmate!  Black Wins!");
-            } else {
-                print("Stalemate!  Black Wins!");
-            }
-        } else if (numMoveBlack == 0) {
-            if (checkMateBlack.size() > 0) {
-                print("Checkmate!  White Wins!");
-            } else {
-                print("Stalemate!  White Wins!");
-            }
-        }
-    }
-
-    private static void showTotalGameTime(long startTime) {
-        int hours = 0;
-        int minutes = 0;
-        int seconds;
-        long totalTime = (System.nanoTime() - startTime) / 1_000_000_000L;
-        while (totalTime >= 60 * 60) {
-            hours++;
-            totalTime -= 60 * 60;
-        }
-        while (totalTime >= 60) {
-            minutes++;
-            totalTime -= 60;
-        }
-        seconds = (int) totalTime;
-        print(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, seconds));
-    }
-
     static void showBoard(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
 //        final String[] charSetAscii = {"?","p","k","b","r","q","k"};
 //        final String tmpWhitePawn = "♟";
@@ -501,16 +438,76 @@ public class Main {
         print();
     }
 
+    private static void showGameSummary(final Board board) {
+        if (board.checkDrawByRepetition()) {
+            Move lastMove = board.getLastMove();
+            print(String.format("Draw by-repetition!  Move from %s to %s made %d times in a row!",
+                    posString(lastMove.getFromCol(), lastMove.getFromRow()),
+                    posString(lastMove.getToCol(), lastMove.getToRow()),
+                    board.getMaxAllowedRepetitions()));
+        }
+
+        List<Move> checkMateBlack = board.kingInCheck(board, Side.Black);
+        List<Move> checkMateWhite = board.kingInCheck(board, Side.White);
+        int numMoveBlack = board.getMoves(0, true).size();
+        int numMoveWhite = board.getMoves(1, true).size();
+
+        assert numMoveBlack > 0 || numMoveWhite > 0 : "Internal error: Both players have 0 moves";
+
+        if (checkMateBlack.size() > 0 && checkMateWhite.size() > 0) {
+            print("Internal error: Both players are in check");
+            print("White King in check from:");
+            for (Move m:checkMateWhite)
+                print("    " + m.toString());
+            print();
+
+            print("Black King in check from:");
+            for (Move m:checkMateBlack)
+                print("    " + m.toString());
+            print();
+        }
+
+        print();
+
+        if (numMoveWhite == 0) {
+            if (checkMateWhite.size() > 0) {
+                print("Checkmate!  Black Wins!");
+            } else {
+                print("Stalemate!  Black Wins!");
+            }
+        } else if (numMoveBlack == 0) {
+            if (checkMateBlack.size() > 0) {
+                print("Checkmate!  White Wins!");
+            } else {
+                print("Stalemate!  White Wins!");
+            }
+        }
+    }
+    private static void showTotalGameTime(long startTime) {
+        int hours = 0;
+        int minutes = 0;
+        int seconds;
+        long totalTime = (System.nanoTime() - startTime) / 1_000_000_000L;
+        while (totalTime >= 60 * 60) {
+            hours++;
+            totalTime -= 60 * 60;
+        }
+        while (totalTime >= 60) {
+            minutes++;
+            totalTime -= 60;
+        }
+        seconds = (int) totalTime;
+        print(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, seconds));
+    }
+
     private static String cfgBg(final String key, final String def) {
         Integer[] cfgRGB = cfgClrStrToAnsi(key);
         return (cfgRGB.length == 3) ? bg24b(cfgRGB[0], cfgRGB[1], cfgRGB[2]) : def;
     }
-
     private static String cfgFg(final String key, final String def) {
         Integer[] cfgRGB = cfgClrStrToAnsi(key);
         return (cfgRGB.length == 3) ? fg24b(cfgRGB[0], cfgRGB[1], cfgRGB[2]) : def;
     }
-
     private static Integer[] cfgClrStrToAnsi(final String cfgStr) {
         String[] parts = cfgStr.split(",");
         if (parts.length < 3) {
