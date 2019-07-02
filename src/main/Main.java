@@ -124,14 +124,13 @@ public class Main {
 
         final Board board = new Board(1);
 
-        final int maxRepetitions = 3;
+        final int maxRepetitions = config.maxDrawReps;
         board.setMaxAllowedRepetitions(maxRepetitions);
 
         final ThreadMsgConsumer callback = new ThreadMsgConsumer(board, moveAgent);
         moveAgent.registerDisplayCallback(callback);
 
-        final int humanSide = Side.White;
-
+        int humanSide = Side.White;
         long gameTime = System.nanoTime();
         long startTime = gameTime;
         Move move;
