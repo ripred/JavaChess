@@ -188,11 +188,9 @@ public class Main {
     private static void showGameSummary(final Board board) {
         if (board.checkDrawByRepetition()) {
             Move lastMove = board.getLastMove();
-            print(String.format("Draw by-repetition!  Move from %c%d to %c%d made %d time in a row!",
-                    lastMove.getFromCol() + 'a',
-                    8 - lastMove.getFromRow(),
-                    lastMove.getToCol() + 'a',
-                    8 - lastMove.getToRow(),
+            print(String.format("Draw by-repetition!  Move from %s to %s made %d times in a row!",
+                    posString(lastMove.getFromCol(), lastMove.getFromRow()),
+                    posString(lastMove.getToCol(), lastMove.getToRow()),
                     board.getMaxAllowedRepetitions()));
         }
 
@@ -383,9 +381,7 @@ public class Main {
             Move move = checkMoves.get(0);
             System.out.print((board.getTurn() == Side.Black) ? "Black" : "White");
             System.out.print(" is in check from ");
-            System.out.println(String.format("%c%d",
-                    move.getFromCol() + 'a',
-                    8 - move.getFromRow()));
+            System.out.println(String.format("%s", posString(move.getFromCol(), move.getFromRow())));
         } else {
             System.out.println(clearEOL);
         }
@@ -567,7 +563,7 @@ public class Main {
             Spot to = board.getSpot(move.getToCol(), move.getToRow());
             int type = from.getType();
             String pieceName = getPieceName(type);
-            String cap = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
+            String cap = to.isEmpty() ? "" : "capturing " + getPieceName(to.getType());
             boolean isCastle = type == Piece.King
                     && (move.getFromCol() - move.getToCol() == 2 || move.getFromCol() - move.getToCol() == -2);
 
@@ -578,12 +574,10 @@ public class Main {
                     sb.append("Castle on queen's side. ");
                 }
             } else {
-                sb.append(String.format("%s from %c%d to %c%d%s. ",
+                sb.append(String.format("%s from %s to %s %s. ",
                         pieceName,
-                        move.getFromCol() + 'A',
-                        8 - move.getFromRow(),
-                        move.getToCol() + 'A',
-                        8 - move.getToRow(),
+                        posString(move.getFromCol(), move.getFromRow()),
+                        posString(move.getToCol(), move.getToRow()),
                         cap));
             }
         }
@@ -625,6 +619,10 @@ public class Main {
         return String.format("%d: %s's Turn: ",
                 board.getNumTurns(),
                 (board.getTurn() == Side.White) ? "White" : "Black");
+    }
+
+    private static String posString(int col, int row) {
+        return String.format("%c%d", 'A' + col, 8 - row);
     }
 
     private static void print() {
