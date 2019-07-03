@@ -252,7 +252,7 @@ public class Main {
 
         final int value = evaluator.evaluate(board);
 
-        StringBuilder sb = new StringBuilder("    Black player taken: ");
+        StringBuilder sb = new StringBuilder("    " + config.player2 + " taken: ");
         for (final int type:board.getPiecesTaken1()) {
             sb.append(whtForeB);
             if (type == Piece.Pawn) {
@@ -262,7 +262,7 @@ public class Main {
         }
         final String takenMsg1 = sb.toString();
 
-        sb = new StringBuilder("    White player taken: ");
+        sb = new StringBuilder("    " + config.player1 + " taken: ");
         for (final int type:board.getPiecesTaken0()) {
             sb.append(blkForeB);
             if (type == Piece.Pawn) {
@@ -273,7 +273,7 @@ public class Main {
         final String takenMsg0 = sb.toString();
 
         final String stat0 = String.format("    Board value:        %,7d : %s's favor",
-                abs(value), ((value < 0) ? "Black" : ((value == 0) ? "No one" : "White")));
+                abs(value), ((value < 0) ? config.player2 : ((value == 0) ? "No one" : config.player1)));
 
         String stat1 = "";
         String stat2 = "";
@@ -282,11 +282,11 @@ public class Main {
         if (startTime != 0) {
             stat1 = String.format("    Time spent:      %,10ds%s",
                     timeSpent,
-                    (timeSpent == config.maxSeconds) ? " (hit cfg limit)" : "");
-            stat1 += clearEOL;
+                    (timeSpent == config.maxSeconds && timeSpent != 0) ? " (hit cfg limit)" : "");
             stat2 = String.format("    Moves examined:  %,10d", numProcessed);
             stat3 = String.format("    (per second):    %,10d", numPerSec);
         }
+        stat1 += clearEOL;
 
         int otherSide = board.getTurn() == Side.Black ? Side.White :Side.Black;
 
@@ -337,7 +337,7 @@ public class Main {
         List<Move> checkMoves = board.kingInCheck(board, board.getTurn());
         if (checkMoves.size() > 0) {
             Move move = checkMoves.get(0);
-            System.out.print((board.getTurn() == Side.Black) ? "Black" : "White");
+            System.out.print((board.getTurn() == Side.Black) ? config.player2 : config.player1);
             System.out.print(" is in check from ");
             System.out.println(String.format("%s", posString(move.getFromCol(), move.getFromRow())));
         } else {
@@ -367,10 +367,10 @@ public class Main {
                 if (lastMove.getToCol() == col && lastMove.getToRow() == row) {
                     if (blkPiece) {
                         fmtClrFore = blkMoved;
-                        fmtAttr = boldAttr;
+//                        fmtAttr = boldAttr;
                     } else {
                         fmtClrFore = whtMoved;
-                        fmtAttr = boldAttr;
+//                        fmtAttr = boldAttr;
                     }
                 }
 
@@ -421,9 +421,9 @@ public class Main {
             System.out.print(resetAll);
 
             if (row == 0) {
-                System.out.print(takenMsg1);
-            } else if (row == 1) {
                 System.out.print(takenMsg0);
+            } else if (row == 1) {
+                System.out.print(takenMsg1);
             } else if (row == 4) {
                 System.out.print(stat0);
                 System.out.print(clearEOL); // clear display to end of line
@@ -458,12 +458,12 @@ public class Main {
 
         if (checkMateBlack.size() > 0 && checkMateWhite.size() > 0) {
             print("Internal error: Both players are in check");
-            print("White King in check from:");
+            print(config.player1 + "'s King in check from:");
             for (Move m:checkMateWhite)
                 print("    " + m.toString());
             print();
 
-            print("Black King in check from:");
+            print(config.player2 + "'s King in check from:");
             for (Move m:checkMateBlack)
                 print("    " + m.toString());
             print();
@@ -473,15 +473,15 @@ public class Main {
 
         if (numMoveWhite == 0) {
             if (checkMateWhite.size() > 0) {
-                print("Checkmate!  Black Wins!");
+                print("Checkmate!  " + config.player2 + " Wins!");
             } else {
-                print("Stalemate!  Black Wins!");
+                print("Stalemate!  " + config.player2 + " Wins!");
             }
         } else if (numMoveBlack == 0) {
             if (checkMateBlack.size() > 0) {
-                print("Checkmate!  White Wins!");
+                print("Checkmate!  " + config.player1 + " Wins!");
             } else {
-                print("Stalemate!  White Wins!");
+                print("Stalemate!  " + config.player1 + " Wins!");
             }
         }
     }
@@ -620,9 +620,9 @@ public class Main {
 
         if (board1.kingInCheck(board1, board1.getTurn()).size() > 0) {
             if (board1.getTurn() == Side.Black) {
-                sb.append("White is in check! ");
+                sb.append(config.player1 + " is in check! ");
             } else {
-                sb.append("Black is in check! ");
+                sb.append(config.player2 + " is in check! ");
             }
         }
 
@@ -651,7 +651,7 @@ public class Main {
     private static String getTurnPrompt(Board board) {
         return String.format("%d: %s's Turn: ",
                 board.getNumTurns(),
-                (board.getTurn() == Side.White) ? "White" : "Black")
+                (board.getTurn() == Side.White) ? config.player1 : config.player2)
                 + clearEOL;
     }
 

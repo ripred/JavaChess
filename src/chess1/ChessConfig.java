@@ -26,6 +26,10 @@ public class ChessConfig {
     public boolean showVictimPaths;     // color the board to show current players possible moves if true
     public boolean showCapturesOnly;    // limit board coloring to only show possible captures if true
 
+    // The player labels
+    public String player1;
+    public String player2;
+
     // The  colors of the background squares
     public String blkBack;
     public String whtBack;
@@ -77,6 +81,9 @@ public class ChessConfig {
         showVictimPaths = Boolean.valueOf(props.getProperty("showVictims", "true"));
         showCapturesOnly = Boolean.valueOf(props.getProperty("showCapturesOnly", "true"));
 
+        player1 = props.getProperty("player1", "Player 1");
+        player2 = props.getProperty("player2", "Player 2");
+
         blkBack  = props.getProperty("blkBack", "142, 142, 142");
         whtBack  = props.getProperty("whtBack", "204, 204, 204");
 
@@ -110,6 +117,9 @@ public class ChessConfig {
         props.setProperty("showVictims", String.valueOf(showVictimPaths));
         props.setProperty("showCapturesOnly", String.valueOf(showCapturesOnly));
 
+        props.setProperty("player1", player1);
+        props.setProperty("player2", player2);
+
         props.setProperty("blkBack", blkBack);
         props.setProperty("whtBack", whtBack);
 
@@ -138,15 +148,21 @@ public class ChessConfig {
             String usage = "\n"
                     + " Usage:\n"
                     + " \n"
+                    + " General Game Settings:\n"
                     + " numDrawReps         number of repeated moves to call game a draw\n"
                     + " \n"
+                    + " AI Settings:\n"
                     + " humanPlayer:        set to true to play as player 1 (white)\n"
                     + " maxThreads:         maximum number of threads for AI to run simultaneously\n"
                     + " aiPlyDepth:         maximum number of moves for AI to look ahead\n"
                     + " maxAISeconds:       maximum number of seconds to allow AI to think (0 for no time limit)\n"
+                    + " \n"
+                    + " UI Settings:\n"
                     + " showVictims:        color the board to show current players possible moves if true\n"
                     + " showTargets:        color the board to show opponents possible moves if true\n"
                     + " showCapturesOnly:   limit board coloring to only show possible captures if true\n"
+                    + " player1             label to use for player 1\n"
+                    + " player2             label to use for player 2\n"
                     + " \n"
                     + " ANSI Colors:\n"
                     + " blkBack             background color for dark squares\n"
@@ -176,3 +192,4 @@ public class ChessConfig {
         return successful;
     }
 }
+
