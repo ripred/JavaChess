@@ -1,20 +1,11 @@
 package main;
 
+import chess1.*;
+import chess1.AI.*;
 import static main.Ansi.*;
 
-//import chess1.*;
-import chess1.ChessConfig;
-import chess1.Board;
-import chess1.Piece;
-import chess1.Move;
-import chess1.Spot;
-import chess1.Side;
-
-//import chess1.AI.*;
-import chess1.AI.PieceValuesPlusPos;
-import chess1.AI.AIMoveSelector;
-import chess1.AI.BoardEvaluator;
-import chess1.AI.Minimax;
+import sun.misc.SignalHandler;
+import sun.misc.Signal;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,42 +13,15 @@ import java.util.Scanner;
 import java.util.List;
 import java.util.Map;
 
-import java.util.function.Consumer;
 import java.io.IOException;
 
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
-
 import static java.lang.Math.abs;
-
-class ThreadMsgConsumer implements Consumer<String> {
-    private static Board board;
-    private static AIMoveSelector agent;
-
-    ThreadMsgConsumer(Board board, AIMoveSelector agent) {
-        ThreadMsgConsumer.board = board;
-        ThreadMsgConsumer.agent = agent;
-    }
-
-    @Override
-    public void accept(String s) {
-        Main.showBoard(board, s, agent, 0);
-    }
-}
 
 
 public class Main {
 
-    // Example of using JNI to call C++ code
-    //
-//    public native void CGateway();
-//    static {
-//        System.loadLibrary("native");
-//    }
-
+    private static ChessConfig config = null;
     private static AIMoveSelector moveAgent = null;
-
-    private static ChessConfig config;
 
     private static void onAppExit() {
         if (moveAgent != null) {
@@ -76,7 +40,7 @@ public class Main {
                 e.printStackTrace();
             } finally {
                 moveAgent = null;
-                System.out.println("Goodbye");
+                System.out.println("Goodbye \uD83D\uDE0E");
             }
         }
 
@@ -87,48 +51,35 @@ public class Main {
 
     public static void main(String[] args) {
 
-        config = new ChessConfig("chess.properties");
-        config.loadConfiguration();
-
-        final int depth = config.maxDepth;
-        final int maxSeconds = config.maxSeconds;
-        final int maxThreads = config.maxThreads;
-
-        moveAgent = new Minimax(maxThreads, depth, maxSeconds);
-
         SignalHandler sigHandler = sig -> {
             // handle SIGINT
 
             onAppExit();
             System.exit(0);
         };
-
         try {
             Signal.handle(new Signal("INT"), sigHandler);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // call our C++ code just for fun: 😎
-//        new Main().CGateway();
+        config = new ChessConfig("chess.properties");
+        config.loadConfiguration();
+        moveAgent = new Minimax(config.maxThreads, config.maxDepth, config.maxSeconds);
 
-        final boolean isHuman = config.humanPlayer;
-
-        playGame(moveAgent, isHuman);
+        playGame(moveAgent, config.humanPlayer);
 
         onAppExit();
     }
 
-    private static void playGame(AIMoveSelector moveAgent, final boolean isHuman) {
+    private static void playGame(final AIMoveSelector moveAgent, final boolean isHuman) {
         System.out.println("\n".repeat(20));
 
         final Board board = new Board(1);
 
-        final int maxRepetitions = config.maxDrawReps;
-        board.setMaxAllowedRepetitions(maxRepetitions);
+        board.setMaxAllowedRepetitions(config.maxDrawReps);
 
-        final ThreadMsgConsumer callback = new ThreadMsgConsumer(board, moveAgent);
-        moveAgent.registerDisplayCallback(callback);
+        moveAgent.registerDisplayCallback(new ThreadMsgConsumer(board, moveAgent));
 
         int humanSide = Side.White;
         long gameTime = System.nanoTime();
@@ -137,12 +88,10 @@ public class Main {
 
 //        board.initTest();
 
-        print();
+        System.out.println();
         showBoard(board, null, moveAgent, 0);
 
-        String prompt = getTurnPrompt(board);
-        System.out.print(prompt);
-
+        System.out.print(getTurnPrompt(board));
         startTime = System.nanoTime();
 
         if (isHuman && board.getTurn() == humanSide) {
@@ -156,10 +105,10 @@ public class Main {
 
             board.executeMove(move);
             if (board.kingInCheck(board, board.getTurn()).size() > 0) {
-                print("Internal error.  Somehow we allowed a move that put us in check!");
+                System.out.println("Internal error.  Somehow we allowed a move that put us in check!");
             }
             board.advanceTurn();
-            print();
+            System.out.println();
             showBoard(board, moveDesc, moveAgent, startTime);
 
             // Check for draw-by-repetition (same made too many times in a row by a player)
@@ -167,9 +116,7 @@ public class Main {
                 break;
             }
 
-            prompt = getTurnPrompt(board);
-            System.out.print(prompt);
-
+            System.out.print(getTurnPrompt(board));
             startTime = System.nanoTime();
 
             if (isHuman && board.getTurn() == humanSide) {
@@ -183,13 +130,10 @@ public class Main {
         showTotalGameTime(gameTime);
     }
 
-    static void showBoard(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
-//        final String[] charSetAscii = {"?","p","k","b","r","q","k"};
-//        final String tmpWhitePawn = "♟";
-        final String[] charSetUnicodeWhite = {"?","♙","♞","♝","♜","♛","♚"};
-//        final String[] charSetUnicodeBlack = {"?","♙","♘","♗","♖","♕","♔"};
-//        final boolean useUnicode = true;
+//    static final String[] charSetAscii = {"   "," p "," k "," b "," r "," q "," k "};
+    private static final String[] charSetUnicodeWhite = {"   "," ♙ "," ♞ "," ♝ "," ♜ "," ♛ "," ♚ "};
 
+    static void showBoard(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
         // The screen row to begin displaying on
         int topRow = 1;
 
@@ -252,28 +196,29 @@ public class Main {
 
         final int value = evaluator.evaluate(board);
 
-        StringBuilder sb = new StringBuilder("    " + config.player2 + " taken: ");
+        StringBuilder sb = new StringBuilder("    " + config.player2 + " taken:");
         for (final int type:board.getPiecesTaken1()) {
             sb.append(whtForeB);
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(charSetUnicodeWhite[type]).append(" ");
+            sb.append(charSetUnicodeWhite[type]);
         }
-        final String takenMsg1 = sb.toString();
+        String takenMsg1 = sb.toString();
 
-        sb = new StringBuilder("    " + config.player1 + " taken: ");
+        sb = new StringBuilder("    " + config.player1 + " taken:");
         for (final int type:board.getPiecesTaken0()) {
             sb.append(blkForeB);
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(charSetUnicodeWhite[type]).append(" ");
+            sb.append(charSetUnicodeWhite[type]);
         }
-        final String takenMsg0 = sb.toString();
+        String takenMsg0 = sb.toString();
 
-        final String stat0 = String.format("    Board value:        %,7d : %s's favor",
+        String stat0 = String.format("    Board value:        %,7d : %s's favor",
                 abs(value), ((value < 0) ? config.player2 : ((value == 0) ? "No one" : config.player1)));
+        stat0 += clearEOL;
 
         String stat1 = "";
         String stat2 = "";
@@ -291,34 +236,8 @@ public class Main {
         int otherSide = board.getTurn() == Side.Black ? Side.White :Side.Black;
 
         // get maps of pieces under attack for both sides
-        List<Integer> showOurTypes = new ArrayList<>();
-        int[] ourTypes = {
-                Piece.Pawn,
-                Piece.Rook,
-                Piece.Knight,
-                Piece.Bishop,
-                Piece.Queen,
-                Piece.King
-        };
-        for (int t:ourTypes) {
-            showOurTypes.add(t);
-        }
-
-        List<Integer> showOpponentTypes = new ArrayList<>();
-        int[] opponentTypes = {
-                Piece.Pawn,
-                Piece.Rook,
-                Piece.Knight,
-                Piece.Bishop,
-                Piece.Queen,
-                Piece.King
-        };
-        for (int t:opponentTypes) {
-            showOpponentTypes.add(t);
-        }
-
-        Map<Move, List<Spot>> targets = createTargetMap(board, board.getTurn(), showOurTypes);
-        Map<Move, List<Spot>> victims = createTargetMap(board, otherSide, showOpponentTypes);
+        Map<Move, List<Spot>> targets = createTargetMap(board, board.getTurn());
+        Map<Move, List<Spot>> victims = createTargetMap(board, otherSide);
 
         // ====================================================================
 
@@ -365,19 +284,13 @@ public class Main {
 
                 Move lastMove = board.getLastMove();
                 if (lastMove.getToCol() == col && lastMove.getToRow() == row) {
-                    if (blkPiece) {
-                        fmtClrFore = blkMoved;
-//                        fmtAttr = boldAttr;
-                    } else {
-                        fmtClrFore = whtMoved;
-//                        fmtAttr = boldAttr;
-                    }
+                    fmtClrFore = blkPiece ? blkMoved : whtMoved;
                 }
 
                 if (type == Piece.King
                         && board.getTurn() == spot.getSide()
                         && board.kingInCheck(board, board.getTurn()).size() > 0) {
-                    fmtClrFore = (spot.getSide() == Side.Black ? blkCheck : whtCheck);
+                    fmtClrFore = ((spot.getSide() == Side.Black) ? blkCheck : whtCheck);
                     fmtAttr = boldAttr;
                 }
 
@@ -389,61 +302,37 @@ public class Main {
 
                 boolean showTargets = config.showTargetPaths;
                 boolean showVictims = config.showVictimPaths;
-                boolean flipPerspective = board.getTurn() == Side.Black;
+                boolean flipPerspective = (board.getTurn() == Side.Black);
 
                 if (spotIsTarget && !spotIsVictim) {
                     if (showTargets) {
-                        if (flipPerspective)
-                            fmtClrBack = clrGive;
-                        else
-                            fmtClrBack = clrTake;
+                        fmtClrBack = flipPerspective ? clrGive : clrTake;
                     }
                 } else if (!spotIsTarget && spotIsVictim) {
                     if (showVictims) {
-                        if (flipPerspective)
-                            fmtClrBack = clrTake;
-                        else
-                            fmtClrBack = clrGive;
+                        fmtClrBack = flipPerspective ? clrTake : clrGive;
                     }
                 } else if (spotIsTarget && spotIsVictim) {
                     if (showTargets || showVictims) {
-                        if (flipPerspective)
-                            fmtClrBack = mergeColors24(clrGive, clrTake, false);
-                        else
-                            fmtClrBack = mergeColors24(clrTake, clrGive, false);
+                        fmtClrBack = flipPerspective
+                                ? mergeColors24(clrGive, clrTake, false)
+                                : mergeColors24(clrTake, clrGive, false);
                     }
                 }
-
-                final String chr = spot.isEmpty() ? " " : charSetUnicodeWhite[type];
-                final String txt = (fmtClrBack + fmtClrFore + fmtAttr + " ") + chr + " ";
-                System.out.print(txt);
+                System.out.print(fmtClrBack + fmtClrFore + fmtAttr + charSetUnicodeWhite[type]);
             }
             System.out.print(resetAll);
-
-            if (row == 0) {
-                System.out.print(takenMsg0);
-            } else if (row == 1) {
-                System.out.print(takenMsg1);
-            } else if (row == 4) {
-                System.out.print(stat0);
-                System.out.print(clearEOL); // clear display to end of line
-            } else if (row == 5) {
-                System.out.print(stat1);
-            } else if (row == 6) {
-                System.out.print(stat2);
-            } else if (row == 7) {
-                System.out.print(stat3);
-            }
-            System.out.println();
+            String[] rowStrings = {takenMsg0, takenMsg1, "", "", stat0, stat1, stat2, stat3};
+            System.out.println(rowStrings[row]);
         }
         System.out.println("    A  B  C  D  E  F  G  H ");
-        print();
+        System.out.println();
     }
 
     private static void showGameSummary(final Board board) {
         if (board.checkDrawByRepetition()) {
             Move lastMove = board.getLastMove();
-            print(String.format("Draw by-repetition!  Move from %s to %s made %d times in a row!",
+            System.out.println(String.format("Draw by-repetition!  Move from %s to %s made %d times in a row!",
                     posString(lastMove.getFromCol(), lastMove.getFromRow()),
                     posString(lastMove.getToCol(), lastMove.getToRow()),
                     board.getMaxAllowedRepetitions()));
@@ -451,48 +340,39 @@ public class Main {
 
         List<Move> checkMateBlack = board.kingInCheck(board, Side.Black);
         List<Move> checkMateWhite = board.kingInCheck(board, Side.White);
-        int numMoveBlack = board.getMoves(0, true).size();
-        int numMoveWhite = board.getMoves(1, true).size();
+        int numMoveBlack = board.getMoves(Side.Black, true).size();
+        int numMoveWhite = board.getMoves(Side.White, true).size();
 
         assert numMoveBlack > 0 || numMoveWhite > 0 : "Internal error: Both players have 0 moves";
 
         if (checkMateBlack.size() > 0 && checkMateWhite.size() > 0) {
-            print("Internal error: Both players are in check");
-            print(config.player1 + "'s King in check from:");
+            System.out.println("Internal error: Both players are in check");
+            System.out.println(config.player1 + "'s King in check from:");
             for (Move m:checkMateWhite)
-                print("    " + m.toString());
-            print();
+                System.out.println("    " + m.toString());
+            System.out.println();
 
-            print(config.player2 + "'s King in check from:");
+            System.out.println(config.player2 + "'s King in check from:");
             for (Move m:checkMateBlack)
-                print("    " + m.toString());
-            print();
+                System.out.println("    " + m.toString());
+            System.out.println();
         }
 
-        print();
+        System.out.println();
 
         if (numMoveWhite == 0) {
-            if (checkMateWhite.size() > 0) {
-                print("Checkmate!  " + config.player2 + " Wins!");
-            } else {
-                print("Stalemate!  " + config.player2 + " Wins!");
-            }
+            System.out.println(((checkMateWhite.size() > 0) ? "Checkmate!  " : "Stalemate!  ") + config.player2 + " Wins!");
         } else if (numMoveBlack == 0) {
-            if (checkMateBlack.size() > 0) {
-                print("Checkmate!  " + config.player1 + " Wins!");
-            } else {
-                print("Stalemate!  " + config.player1 + " Wins!");
-            }
+            System.out.println(((checkMateBlack.size() > 0) ? "Checkmate!  " : "Stalemate!  ") + config.player1 + " Wins!");
         }
     }
     private static void showTotalGameTime(long startTime) {
         long totalTime = (System.nanoTime() - startTime) / 1_000_000_000L;
-        int hours = (int)(totalTime / 3600L);
-        totalTime -= hours * 3600L;
+        int hours   = (int)(totalTime / 3600L);
+        totalTime  -= hours * 3600L;
         int minutes = (int)(totalTime / 60L);
-        totalTime -= minutes * 60L;
-        int seconds = (int) totalTime;
-        print(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, seconds));
+        totalTime  -= minutes * 60L;
+        System.out.println(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, totalTime));
     }
 
     private static String cfgBg(final String key, final String def) {
@@ -515,37 +395,27 @@ public class Main {
         }
     }
 
-    private static Map<Move, List<Spot>> createTargetMap(final Board board, final int side, List<Integer> types) {
+    private static Map<Move, List<Spot>> createTargetMap(final Board board, final int side) {
         // ====================================================================
         // create a map of the current player moves which could
         // take an opponent piece
         Map<Move, List<Spot>> targets = new HashMap<>();
-
-        List<Move> ourMoves;
-
-        if (side == board.getTurn()) {
-            ourMoves = board.getCurrentPlayerMoves();
-        } else {
-            ourMoves = board.getMovesSorted(side);
-        }
+        List<Move> ourMoves = (side == board.getTurn()) ? board.getCurrentPlayerMoves() : board.getMovesSorted(side);
 
         for (Move move:ourMoves) {
+            if (config.showCapturesOnly && move.getValue() == 0) continue;
+
             Spot start = board.getSpot(move.getFromCol(), move.getFromRow());
-            if (!types.contains(start.getType()))
-                continue;
-
-            boolean showCapturesOnly = config.showCapturesOnly;
-            if (showCapturesOnly && move.getValue() == 0) continue;
-
+            int type = start.getType();
             List<Spot> spots = new ArrayList<>();
-            int deltaX;
-            int deltaY;
             int curX = start.getCol();
             int curY = start.getRow();
             int toCol = move.getToCol();
             int toRow = move.getToRow();
+            int deltaX;
+            int deltaY;
 
-            switch (start.getType()) {
+            switch (type) {
                 // Single out the pieces that capture using only a
                 // destination and not a path of spots to it...
                 case Piece.Pawn:
@@ -564,7 +434,7 @@ public class Main {
                     do {
                         curX += deltaX;
                         curY += deltaY;
-                        Spot next = new Spot(start.getSide(), start.getType(), curX, curY);
+                        Spot next = new Spot(start.getSide(), type, curX, curY);
                         spots.add(next);
                     } while (curX != toCol || curY != toRow);
                     targets.put(move, spots);
@@ -576,6 +446,7 @@ public class Main {
         }
         return targets;
     }
+
     private static boolean isSpotATarget(final Map<Move, List<Spot>> targets, final int col, final int row) {
         for (Move move:targets.keySet()) {
             List<Spot> path = targets.get(move);
@@ -597,21 +468,15 @@ public class Main {
             int type = from.getType();
             String pieceName = getPieceName(type);
             String cap = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
-            boolean isCastle = type == Piece.King
-                    && (move.getFromCol() - move.getToCol() == 2 || move.getFromCol() - move.getToCol() == -2);
+            boolean isCastle = (type == Piece.King) && abs(move.getFromCol() - move.getToCol()) == 2;
 
             if (isCastle) {
-                if (from.getCol() == 4) {
-                    sb.append("Castle on king's side. ");
-                } else {
-                    sb.append("Castle on queen's side. ");
-                }
+                sb.append("Castle on ").append((from.getCol() == 4) ? "king" : "queen").append("'s side. ");
             } else {
-                sb.append(String.format("%s from %s to %s%s. ",
-                        pieceName,
-                        posString(move.getFromCol(), move.getFromRow()),
-                        posString(move.getToCol(), move.getToRow()),
-                        cap));
+                sb.append(pieceName)
+                        .append(" from ").append(posString(move.getFromCol(), move.getFromRow()))
+                        .append(" to ").append(posString(move.getToCol(), move.getToRow()))
+                        .append(cap);
             }
         }
 
@@ -619,35 +484,18 @@ public class Main {
         board1.executeMove(move);
 
         if (board1.kingInCheck(board1, board1.getTurn()).size() > 0) {
-            if (board1.getTurn() == Side.Black) {
-                sb.append(config.player1 + " is in check! ");
-            } else {
-                sb.append(config.player2 + " is in check! ");
-            }
+            sb.append((board1.getTurn() == Side.Black) ? config.player1 : config.player2).append(" is in check! ");
         }
-
         return sb.toString();
     }
-    private static String getPieceName(final int type) {
-        switch (type) {
-            case Piece.Empty:
-                return "Empty";
-            case Piece.Pawn:
-                return "Pawn";
-            case Piece.Knight:
-                return "Knight";
-            case Piece.Bishop:
-                return "Bishop";
-            case Piece.Rook:
-                return "Rook";
-            case Piece.Queen:
-                return "Queen";
-            case Piece.King:
-                return "King";
-            default:
-                return "Unknown";
-        }
+
+    /** A table of piece names */
+    private static final String[] typeNames = {"Empty","Pawn","Knight","Bishop","Rook","Queen","King"};
+
+    private static String getPieceName(int type) {
+        return typeNames[(type & 0x7)];
     }
+
     private static String getTurnPrompt(Board board) {
         return String.format("%d: %s's Turn: ",
                 board.getNumTurns(),
@@ -655,18 +503,21 @@ public class Main {
                 + clearEOL;
     }
 
-    private static String posString(int col, int row) {
-        return String.format("%c%d", 'A' + col, 8 - row);
+    private static char toPos(int nibble) {
+        return posDigit[(nibble & 0xF)];
     }
 
-    private static void print() {
-        System.out.println();
+    /** A table of position digits */
+    private static final char[] posDigit = {
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', '8', '7', '6', '5', '4', '3', '2', '1'
+    };
+
+    private static String posString(int col, int row) {
+        return String.valueOf(new char[] {toPos(col), toPos(row+8)});
     }
-    private static void print(String s) {
-        System.out.println(s);
-    }
+
     private static Move getHumanMove(final Board board) {
-        String prompt = "Enter your move (ex: a2 a3): ";
+        String prompt = "your move (ex: a2 a3): ";
         String response;
 
         // Turn the cursor on
@@ -705,6 +556,5 @@ public class Main {
             System.out.println("That is not a legal move.");
         }
     }
-
 }
 
