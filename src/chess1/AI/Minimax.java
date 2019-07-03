@@ -280,6 +280,7 @@ public class Minimax extends AIMoveSelector {
 
     int minmax(final Board board, int alpha, int beta, int depth, boolean maximize) {
         int value = maximize ? Piece.MIN_VALUE : Piece.MAX_VALUE;
+        int movesExamined = 0;
 
         if (depth <= 0) {
             return evaluator.evaluate(board);
@@ -290,9 +291,7 @@ public class Minimax extends AIMoveSelector {
             currentBoard.executeMove(move);
             currentBoard.advanceTurn();
 
-            synchronized (processedLock) {
-                ++movesProcessed;
-            }
+            ++movesExamined;
 
             // See if the move we just made leaves the other player with
             // no moves and return the best value we've seen if so:
@@ -333,6 +332,9 @@ public class Minimax extends AIMoveSelector {
             if (Thread.currentThread().isInterrupted()) {
                 break;
             }
+        }
+        synchronized (processedLock) {
+            movesProcessed += movesExamined;
         }
         return value;
     }
