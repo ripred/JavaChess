@@ -17,6 +17,7 @@ public class ChessConfig {
 
     // AI Settings:
     public boolean humanPlayer;         // human player 1 if true
+    public boolean humanMovesFirst;     // human player plays white if true
     public int     maxThreads;          // maximum number of threads in thread pool
     public int     maxSeconds;          // maximum number of seconds AI player is allowed per move
     public int     maxDepth;            // maximum ply depth AI searches ahead
@@ -73,6 +74,7 @@ public class ChessConfig {
         maxDrawReps = Integer.valueOf(props.getProperty("numDrawReps", "3"));
 
         humanPlayer = Boolean.valueOf(props.getProperty("humanPlayer", "false"));
+        humanMovesFirst = Boolean.valueOf(props.getProperty("humanMovesFirst", "true"));
         maxThreads = Integer.valueOf(props.getProperty("maxThreads", "100"));
         maxDepth = Integer.valueOf(props.getProperty("aiPlyDepth", "6"));
         maxSeconds = Integer.valueOf(props.getProperty("maxAISeconds", "30"));
@@ -109,6 +111,7 @@ public class ChessConfig {
         props.setProperty("numDrawReps", String.valueOf(maxDrawReps));
 
         props.setProperty("humanPlayer", String.valueOf(humanPlayer));
+        props.setProperty("humanMovesFirst", String.valueOf(humanMovesFirst));
         props.setProperty("maxThreads", String.valueOf(maxThreads));
         props.setProperty("aiPlyDepth", String.valueOf(maxDepth));
         props.setProperty("maxAISeconds", String.valueOf(maxSeconds));
@@ -152,7 +155,8 @@ public class ChessConfig {
                     + " numDrawReps         number of repeated moves to call game a draw\n"
                     + " \n"
                     + " AI Settings:\n"
-                    + " humanPlayer:        set to true to play as player 1 (white)\n"
+                    + " humanPlayer:        set to true to play either side\n"
+                    + " humanMovesFirst:    set to true to play as player 1 (white)\n"
                     + " maxThreads:         maximum number of threads for AI to run simultaneously\n"
                     + " aiPlyDepth:         maximum number of moves for AI to look ahead\n"
                     + " maxAISeconds:       maximum number of seconds to allow AI to think (0 for no time limit)\n"

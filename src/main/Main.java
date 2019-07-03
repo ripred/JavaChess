@@ -83,9 +83,9 @@ public class Main {
 
         moveAgent.registerDisplayCallback(new ThreadMsgConsumer(board, moveAgent));
 
-        int humanSide = Side.White;
-        long gameTime = System.nanoTime();
-        long startTime = gameTime;
+        int humanSide = config.humanMovesFirst ? Side.White : Side.Black;
+        long gameStart = System.nanoTime();
+        long moveStart;
         Move move;
 
 //        board.initTest();
@@ -94,24 +94,17 @@ public class Main {
         showBoard(board, null, moveAgent, 0);
 
         System.out.print(getTurnPrompt(board));
-        startTime = System.nanoTime();
-
-        if (isHuman && board.getTurn() == humanSide) {
-            move = getHumanMove(board);
-        } else {
-            move = moveAgent.bestMove(board);
-        }
+        moveStart = System.nanoTime();
+        move = getNextPlayersMove(board, moveAgent);
 
         while (move != null) {
             String moveDesc = getMoveDesc(board, move);
 
             board.executeMove(move);
-            if (board.kingInCheck(board, board.getTurn()).size() > 0) {
-                System.out.println("Internal error.  Somehow we allowed a move that put us in check!");
-            }
             board.advanceTurn();
+
             System.out.println();
-            showBoard(board, moveDesc, moveAgent, startTime);
+            showBoard(board, moveDesc, moveAgent, moveStart);
 
             // Check for draw-by-repetition (same made too many times in a row by a player)
             if (board.checkDrawByRepetition()) {
@@ -119,17 +112,21 @@ public class Main {
             }
 
             System.out.print(getTurnPrompt(board));
-            startTime = System.nanoTime();
-
-            if (isHuman && board.getTurn() == humanSide) {
-                move = getHumanMove(board);
-            } else {
-                move = moveAgent.bestMove(board);
-            }
+            moveStart = System.nanoTime();
+            move = getNextPlayersMove(board, moveAgent);
         }
 
         showGameSummary(board);
-        showTotalGameTime(gameTime);
+        showTotalGameTime(gameStart);
+    }
+
+    private static Move getNextPlayersMove(Board board, AIMoveSelector agent) {
+        if (config.humanPlayer) {
+            if ((board.getTurn() == Side.White) ^ !config.humanMovesFirst) {
+                return getHumanMove(board);
+            }
+        }
+        return moveAgent.bestMove(board);
     }
 
 //    static final String[] charSetAscii = {"   "," p "," k "," b "," r "," q "," k "};
