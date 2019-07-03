@@ -4,7 +4,7 @@ public interface Piece {
     int MAX_VALUE = Integer.MAX_VALUE - (Integer.MAX_VALUE / 4);
     int MIN_VALUE = 0 - MAX_VALUE;
 
-    int Empty  = -1;
+    int Empty  =  0;
     int Pawn   =  1;
     int Knight =  2;
     int Bishop =  3;
