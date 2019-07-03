@@ -73,7 +73,9 @@ public class Main {
     }
 
     private static void playGame(final AIMoveSelector moveAgent, final boolean isHuman) {
-        System.out.println("\n".repeat(20));
+        for (int n=0; n < 20; ++n) {
+            System.out.println("\n");
+        }
 
         final Board board = new Board(1);
 
