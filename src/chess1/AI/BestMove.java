@@ -9,10 +9,12 @@ import chess1.Piece;
  *
  */
 class BestMove {
+    boolean endGameFound;
     Move move;
     int value;
 
     BestMove(boolean maximize) {
+        endGameFound = false;
         value = maximize ? Piece.MIN_VALUE : Piece.MAX_VALUE;
         move = null;
     }
