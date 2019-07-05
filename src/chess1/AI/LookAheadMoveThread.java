@@ -12,13 +12,12 @@ import java.util.concurrent.Callable;
  * and will return the best move they've seen so far if it expires.
  *
  */
-public class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
+public class LookAheadMoveThread implements Callable<BestMove> {
     private boolean maximize;
     private Minimax minimax;
     private Board board;
     private int depth;
     private Move move;
-    private boolean endMoveFound;
     private BestMove best;
 
     LookAheadMoveThread(final Board board, final Minimax minimax, boolean maximize, final Move move, int depth) {
@@ -27,7 +26,6 @@ public class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
         this.maximize = maximize;
         this.depth = depth;
         this.move = move;
-        this.endMoveFound = false;
 
         this.board = new Board(board);
         this.board.executeMove(move);
@@ -35,15 +33,15 @@ public class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
         minimax.addNumMovesExamined(1);
 
         // See if that move left the other player with no moves and return it if so:
-        endMoveFound = this.board.getCurrentPlayerMoves().isEmpty();
-        if (endMoveFound) {
+        best.endGameFound = this.board.getCurrentPlayerMoves().isEmpty();
+        if (best.endGameFound) {
             best.move = move;
             best.value = minimax.evaluate(this.board);
         }
     }
 
     boolean foundEndMove() {
-        return endMoveFound;
+        return best.endGameFound;
     }
 
     BestMove getBestMove() {
@@ -52,9 +50,9 @@ public class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
 
     // This call is made to us when we are launched
     @Override
-    public LookAheadMoveThread call() {
-        if (endMoveFound) {
-            return this;
+    public BestMove call() {
+        if (best.endGameFound) {
+            return best;
         }
 
         Thread.yield();
@@ -69,6 +67,6 @@ public class LookAheadMoveThread implements Callable<LookAheadMoveThread> {
             best.value = lookAheadVal;
             best.move = move;
         }
-        return this;
+        return best;
     }
 }

@@ -130,7 +130,7 @@ public class Minimax extends AIMoveSelector {
                 break;
             }
 
-            FutureTask<LookAheadMoveThread> task = new FutureTask<>(lookAheadThread);
+            FutureTask<BestMove> task = new FutureTask<>(lookAheadThread);
             lookAheadThreads[numThreads++] = task;
             maxThreads = Integer.max(maxThreads, numThreads);
             Thread t = new Thread(task);
@@ -140,16 +140,16 @@ public class Minimax extends AIMoveSelector {
 
         // Now we wait on all of the threads to finish so we can see which has the best score
         for (int i = 0; i < numThreads; ++i) {
-            LookAheadMoveThread threadResult = null;
+            BestMove threadResult = null;
             try {
-                threadResult = (LookAheadMoveThread) lookAheadThreads[i].get();
+                threadResult = (BestMove) lookAheadThreads[i].get();
             } catch (Exception e) {
                 System.out.println("\nWe're having problems waiting for move threads to finish..\n");
                 e.printStackTrace();
             }
 
-            if (threadResult != null && threadResult.foundEndMove()) {
-                best = threadResult.getBestMove();
+            if (threadResult != null && threadResult.endGameFound) {
+                best = threadResult;
 
                 for (int k = i + 1; k < numThreads; ++k) {
                     lookAheadThreads[k].cancel(true);
@@ -160,10 +160,10 @@ public class Minimax extends AIMoveSelector {
             Thread.yield();
 
             if (threadResult != null) {
-                if (maximize && threadResult.getBestMove().value > best.value) {
-                    best = threadResult.getBestMove();
-                } else if (!maximize && threadResult.getBestMove().value < best.value) {
-                    best = threadResult.getBestMove();
+                if (maximize && threadResult.value > best.value) {
+                    best = threadResult;
+                } else if (!maximize && threadResult.value < best.value) {
+                    best = threadResult;
                 }
             }
 
