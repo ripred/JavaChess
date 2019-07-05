@@ -129,7 +129,7 @@ public class Main {
         return moveAgent.bestMove(board);
     }
 
-//    static final String[] charSetAscii = {"   "," p "," k "," b "," r "," q "," k "};
+//    static final String[] charSetAscii = {"   "," p "," n "," b "," r "," q "," k "};
     private static final String[] charSetUnicodeWhite = {"   "," ♙ "," ♞ "," ♝ "," ♜ "," ♛ "," ♚ "};
 
     static void showBoard(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
@@ -201,7 +201,7 @@ public class Main {
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(charSetUnicodeWhite[type]);
+            sb.append(" " + charSetUnicodeWhite[type].trim());
         }
         String takenMsg1 = sb.toString();
 
@@ -211,7 +211,7 @@ public class Main {
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(charSetUnicodeWhite[type]);
+            sb.append(" " + charSetUnicodeWhite[type].trim());
         }
         String takenMsg0 = sb.toString();
 
