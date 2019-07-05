@@ -47,7 +47,7 @@ public class Board {
      * @param ref The Board object to copy into this new Board.
      */
     public Board(final Board ref) {
-        board = ref.copyBoard(false);
+        board = ref.copyBoard();
         verbose = ref.verbose;
         turn = ref.turn;
         passes = ref.passes;
@@ -126,14 +126,9 @@ public class Board {
     /**
      * @return Returns a new copy of the current List<Spot> of the spots on the board.
      */
-    private List<Spot> copyBoard(boolean reverse) {
+    private List<Spot> copyBoard() {
         List<Spot> newBoard = new ArrayList<>();
-        for (Spot s:board) {
-            if (reverse)
-                newBoard.add(0, new Spot(s));
-            else
-                newBoard.add(new Spot(s));
-        }
+        for (Spot s:board) newBoard.add(new Spot(s));
         return newBoard;
     }
 
@@ -214,6 +209,59 @@ public class Board {
         turn = (turn == Side.White) ? Side.Black : Side.White;
         currentPlayerMoves = getMovesSorted(turn);
     }
+
+//    /**
+//     * Display the current board state on the output console.
+//     *
+//     */
+//    @SuppressWarnings("ConstantConditions")
+//    void show() {
+//        String[] charSetAscii = {"?","p","k","b","r","q","k"};
+////        String tmpWhitePawn = "♟";
+//        String[] charSetUnicodeWhite = {"?","♙","♞","♝","♜","♛","♚"};
+//        String[] charSetUnicodeBlack = {"?","♙","♘","♗","♖","♕","♔"};
+//        final boolean useUnicode = true;
+//
+//        for (int row=0; row <= 7; ++row) {
+//            System.out.print(String.format("%d ", 8 - row));
+//            for (int col=0; col <= 7; ++col) {
+//                String c;
+//                Spot spot = getSpot(col, row);
+//                if (spot.isEmpty()) {
+//                    c = ((col + row) % 2 == 0) ? "." : " ";
+//                } else {
+//                    if (spot.getSide() == Side.White) {
+//                        if (useUnicode)
+//                            c = charSetUnicodeWhite[spot.getType()];
+//                        else
+//                            c = charSetAscii[spot.getType()].toUpperCase();
+//                    } else {
+//                        if (useUnicode)
+//                            c = charSetUnicodeBlack[spot.getType()];
+//                        else
+//                            c = charSetAscii[spot.getType()];
+//                    }
+//                }
+//                System.out.print(c + " ");
+//            }
+//
+//            // Show the pieces taken at the end of the first 2 rows:
+//            if (row == 0) {
+//                System.out.print("   Black pieces taken: ");
+//                for (int piece : piecesTaken1) {
+//                    System.out.print(charSetUnicodeWhite[piece] + " ");
+//                }
+//            } else if (row == 1) {
+//                System.out.print("   White pieces taken: ");
+//                for (int piece : piecesTaken0) {
+//                    System.out.print(charSetUnicodeBlack[piece] + " ");
+//                }
+//            }
+//
+//            System.out.println();
+//        }
+//        System.out.println("  a b c d e f g h");
+//    }
 
     /**
      * Set all of the attributes of a spot on the board.
@@ -393,18 +441,7 @@ public class Board {
         final List<Move> moves = new ArrayList<>();
         List<Move> pMoves;
 
-        int start = 0;
-        int end = 64;
-        int delta = 1;
-
-        if (turn == Side.Black) {
-            start = 63;
-            end = -1;
-            delta = -1;
-        }
-
-        for (int spotLoop = start; spotLoop != end; spotLoop += delta) {
-            Spot spot = board.get(spotLoop);
+        for (Spot spot : board) {
             if (spot.isEmpty() || spot.getSide() != side) {
                 continue;
             }

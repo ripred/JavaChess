@@ -2,8 +2,6 @@ package chess1.AI;
 
 import chess1.Board;
 
-import java.util.List;
-
 /**
  * The BoardEvaluator interface has one method: evaluate()
  * which returns a score for the state of the Board.
@@ -13,5 +11,5 @@ import java.util.List;
  * An evaluation < 0 means that black has an advantage.
  */
 public interface BoardEvaluator {
-    int evaluate(final Board board, List<Integer> statList);
+    int evaluate(final Board board);
 }
