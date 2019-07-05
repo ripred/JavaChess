@@ -589,16 +589,8 @@ public class Board {
      * @return A new List<Move> containing all possible moves a pawn could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    private List<Move> getPawnMoves(int col, int row) throws IllegalArgumentException {
-        if (!isValidSpot(col, row)) {
-            throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
-        }
+    private List<Move> getPawnMoves(int col, int row) {
         Spot spot = getSpot(col, row);
-
-        if (spot.isEmpty()) {
-            throw new IllegalArgumentException("No piece at spot col: " + col + " or row: " + row);
-        }
-
         List<Move> moves = new ArrayList<>();
         int forward = spot.getSide() == Side.White ? -1 : 1;
 
@@ -618,16 +610,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a rook could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    private List<Move> getRookMoves(int col, int row) throws IllegalArgumentException {
-        if (!isValidSpot(col, row)) {
-            throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
-        }
-        Spot startSpot = getSpot(col, row);
-
-        if (startSpot.isEmpty()) {
-            throw new IllegalArgumentException("No piece at spot col: " + col + " or row: " + row);
-        }
-
+    private List<Move> getRookMoves(int col, int row) {
         List<Move> moves = new ArrayList<>();
 
         for (int x=col - 1; x >= 0; --x) {
@@ -673,16 +656,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a knight could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    private List<Move> getKnightMoves(int col, int row) throws IllegalArgumentException {
-        if (!isValidSpot(col, row)) {
-            throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
-        }
-        Spot spot = getSpot(col, row);
-
-        if (spot.isEmpty()) {
-            throw new IllegalArgumentException("No piece at spot col: " + col + " or row: " + row);
-        }
-
+    private List<Move> getKnightMoves(int col, int row) {
         List<Move> moves = new ArrayList<>();
 
         addMoveIfValid(moves, col, row, col - 1, row - 2);
@@ -705,16 +679,7 @@ public class Board {
      * @return A new List<Move> containing all possible moves a bishop could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    private List<Move> getBishopMoves(int col, int row) throws IllegalArgumentException {
-        if (!isValidSpot(col, row)) {
-            throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
-        }
-        Spot spot = getSpot(col, row);
-
-        if (spot.isEmpty()) {
-            throw new IllegalArgumentException("No piece at spot col: " + col + " or row: " + row);
-        }
-
+    private List<Move> getBishopMoves(int col, int row) {
         List<Move> moves = new ArrayList<>();
 
         // nw
@@ -764,19 +729,9 @@ public class Board {
      * @return A new List<Move> containing all possible moves a queen could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    private List<Move> getQueenMoves(int col, int row) throws IllegalArgumentException {
-        if (!isValidSpot(col, row)) {
-            throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
-        }
-        Spot spot = getSpot(col, row);
-
-        if (spot.isEmpty()) {
-            throw new IllegalArgumentException("No piece at spot col: " + col + " or row: " + row);
-        }
-
+    private List<Move> getQueenMoves(int col, int row) {
         List<Move> moves = getRookMoves(col, row);
         moves.addAll(getBishopMoves(col, row));
-
         return moves;
     }
 
@@ -788,16 +743,8 @@ public class Board {
      * @return A new List<Move> containing all possible moves a king could make from the given spot
      * @throws IllegalArgumentException if the specified location is invalid or if it does not contain a piece to move.
      */
-    private List<Move> getKingMoves(int col, int row) throws IllegalArgumentException {
-        if (!isValidSpot(col, row)) {
-            throw new IllegalArgumentException("Invalid col: " + col + " or row: " + row);
-        }
+    private List<Move> getKingMoves(int col, int row) {
         Spot spot = getSpot(col, row);
-
-        if (spot.isEmpty()) {
-            throw new IllegalArgumentException("No piece at spot col: " + col + " or row: " + row);
-        }
-
         List<Move> moves = new ArrayList<>();
 
         addMoveIfValid(moves, col, row, col - 1, row - 1);
@@ -827,7 +774,6 @@ public class Board {
                 && !getSpot(col - 4, row).getMoved()) {
             addMoveIfValid(moves, col, row, col - 2, row);
         }
-
         return moves;
     }
 }
