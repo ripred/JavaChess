@@ -21,7 +21,7 @@ import static java.lang.Math.abs;
 public class Main {
 
     private static ChessConfig config = null;
-    private static AIMoveSelector moveAgent = null;
+    private static Minimax moveAgent = null;
 
     private static void onAppExit() {
         if (moveAgent != null) {
@@ -63,9 +63,18 @@ public class Main {
             e.printStackTrace();
         }
 
+        int throttle = 0;
+        if (args.length > 0) {
+            throttle = Integer.valueOf(args[0]);
+        }
+
         config = new ChessConfig("chess.properties");
         config.loadConfiguration();
         moveAgent = new Minimax(config.maxThreads, config.maxDepth, config.maxSeconds);
+
+        if (throttle > 0) {
+            moveAgent.setThrottle(throttle);
+        }
 
         playGame(moveAgent, config.humanPlayer);
 
@@ -191,9 +200,36 @@ public class Main {
         final int numProcessed = agent.getNumMovesExamined();
         final long numPerSec = (timeSpent == 0) ? numProcessed : (numProcessed / timeSpent);
 
-        final BoardEvaluator evaluator = new PieceValuesPlusPos();
+        final PieceValuesPlusPos evaluator = new PieceValuesPlusPos();
 
-        final int value = evaluator.evaluate(board);
+        final int blkMat = 0;
+        final int whtMat = 1;
+        final int blkBon = 2;
+        final int whtBon = 3;
+        final int blkFriend = 4;
+        final int whtFriend = 5;
+        final int blkFoe = 6;
+        final int whtFoe = 7;
+        final int blkBlock = 8;
+        final int whtBlock = 9;
+
+        List<Integer> statList = new ArrayList<>();
+
+        final int value = evaluator.evaluate(board, statList);
+
+        String blkStat = String.format("    Black Mat: %3d, Bon: %4d, Frnd: %4d, Foe: %4d, Blk: %4d",
+                (statList.get(blkMat) - Piece.values[Piece.King]) / 1000,
+                statList.get(blkBon),
+                statList.get(blkFriend),
+                statList.get(blkFoe),
+                statList.get(blkBlock));
+        String whtStat = String.format("    White Mat: %3d, Bon: %4d, Frnd: %4d, Foe: %4d, Blk: %4d",
+                (statList.get(whtMat) - Piece.values[Piece.King]) / 1000,
+                statList.get(whtBon),
+                statList.get(whtFriend),
+                statList.get(whtFoe),
+                statList.get(whtBlock));
+
 
         StringBuilder sb = new StringBuilder("    " + config.player2 + " taken:");
         for (final int type:board.getPiecesTaken1()) {
@@ -201,7 +237,7 @@ public class Main {
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(charSetUnicodeWhite[type]);
+            sb.append(" " + charSetUnicodeWhite[type].trim());
         }
         String takenMsg1 = sb.toString();
 
@@ -211,7 +247,7 @@ public class Main {
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(charSetUnicodeWhite[type]);
+            sb.append(" " + charSetUnicodeWhite[type].trim());
         }
         String takenMsg0 = sb.toString();
 
@@ -321,7 +357,7 @@ public class Main {
                 System.out.print(fmtClrBack + fmtClrFore + fmtAttr + charSetUnicodeWhite[type]);
             }
             System.out.print(resetAll);
-            String[] rowStrings = {takenMsg0, takenMsg1, "", "", stat0, stat1, stat2, stat3};
+            String[] rowStrings = {takenMsg0, takenMsg1, blkStat, whtStat, stat0, stat1, stat2, stat3};
             System.out.println(rowStrings[row]);
         }
         System.out.println("    A  B  C  D  E  F  G  H ");
@@ -470,7 +506,7 @@ public class Main {
             boolean isCastle = (type == Piece.King) && abs(move.getFromCol() - move.getToCol()) == 2;
 
             if (isCastle) {
-                sb.append("Castle on ").append((from.getCol() == 4) ? "king" : "queen").append("'s side. ");
+                sb.append("Castle on ").append((to.getCol() == 6) ? "king" : "queen").append("'s side. ");
             } else {
                 sb.append(pieceName)
                         .append(" from ").append(posString(move.getFromCol(), move.getFromRow()))

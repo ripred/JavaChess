@@ -34,6 +34,7 @@ public class Minimax extends AIMoveSelector {
     private int maxThreads;
     private int startDepth;
     private long stopNanos;
+    private int throttle;
 
     @Override
     public void registerDisplayCallback(Consumer<String> cb) {
@@ -58,6 +59,7 @@ public class Minimax extends AIMoveSelector {
         this.movesProcessed = 0;
         this.callback = null;
         this.maxThreads = 0;
+        this.throttle = 0;
     }
 
     @Override
@@ -75,7 +77,7 @@ public class Minimax extends AIMoveSelector {
     }
 
     int evaluate(final Board board) {
-        return evaluator.evaluate(board);
+        return evaluator.evaluate(board, null);
     }
 
     public void setDepth(int n) {
@@ -84,6 +86,10 @@ public class Minimax extends AIMoveSelector {
 
     public int getDepth() {
         return startDepth;
+    }
+
+    public void setThrottle(int n) {
+        throttle = n;
     }
 
     /**
@@ -160,9 +166,9 @@ public class Minimax extends AIMoveSelector {
             Thread.yield();
 
             if (threadResult != null) {
-                if (maximize && threadResult.getBestMove().value > best.value) {
+                if (maximize && threadResult.getBestMove().value >= best.value) {
                     best = threadResult.getBestMove();
-                } else if (!maximize && threadResult.getBestMove().value < best.value) {
+                } else if (!maximize && threadResult.getBestMove().value <= best.value) {
                     best = threadResult.getBestMove();
                 }
             }
@@ -283,7 +289,7 @@ public class Minimax extends AIMoveSelector {
         int movesExamined = 0;
 
         if (depth <= 0) {
-            return evaluator.evaluate(board);
+            return evaluator.evaluate(board, null);
         }
 
         for (final Move move : board.getCurrentPlayerMoves()) {
@@ -297,8 +303,8 @@ public class Minimax extends AIMoveSelector {
             // no moves and return the best value we've seen if so:
             if (currentBoard.getCurrentPlayerMoves().size() == 0) {
                 value = maximize ?
-                        Piece.MAX_VALUE - (100 - depth) :
-                        Piece.MIN_VALUE + (100 - depth);
+                        Piece.MAX_VALUE - (10 - depth) :
+                        Piece.MIN_VALUE + (10 - depth);
                 break;
             }
 
@@ -307,7 +313,7 @@ public class Minimax extends AIMoveSelector {
             // The minimax step
             // While we have the depth keep looking ahead to see what this move accomplishes
             int lookAheadValue = minmax(currentBoard, alpha, beta, depth - 1, !maximize);
-            if ((!maximize && lookAheadValue < value) || (maximize && lookAheadValue > value)) {
+            if ((!maximize && lookAheadValue <= value) || (maximize && lookAheadValue >= value)) {
                 value = lookAheadValue;
             }
 
@@ -331,6 +337,15 @@ public class Minimax extends AIMoveSelector {
 
             if (Thread.currentThread().isInterrupted()) {
                 break;
+            }
+
+            if (this.throttle > 0) {
+                try {
+                    int factor = ((throttle * 10_000 / startDepth) * depth) / 10_000;
+                    Thread.sleep(0, factor);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
         synchronized (processedLock) {

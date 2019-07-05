@@ -5,6 +5,8 @@ import chess1.Piece;
 import chess1.Side;
 import chess1.Spot;
 
+import java.util.List;
+
 /**
  * The TotalPieceValues class is an implementation of the
  * BoardEvaluator interface.
@@ -15,7 +17,7 @@ import chess1.Spot;
 public class TotalPieceValues implements BoardEvaluator {
 
     @Override
-    public int evaluate(final Board board) {
+    public int evaluate(final Board board, List<Integer> statList) {
         int value = 0;
         for (Spot s:board.getBoard()) {
             if (s.isEmpty()) continue;

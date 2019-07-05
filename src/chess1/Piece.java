@@ -12,7 +12,7 @@ public interface Piece {
     int Queen  =  5;
     int King   =  6;
 
-    int[] values = {0, 10000, 30000, 30000, 50000, 90000, MAX_VALUE};
+    int[] values = {0, 10000, 31000, 30000, 50000, 90000, MAX_VALUE};
 }
 
 

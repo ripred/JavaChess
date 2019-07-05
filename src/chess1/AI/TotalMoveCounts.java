@@ -3,6 +3,8 @@ package chess1.AI;
 import chess1.Board;
 import chess1.Side;
 
+import java.util.List;
+
 /**
  * The TotalMoveCounts class is an implementation of the
  * BoardEvaluator interface.
@@ -13,7 +15,7 @@ import chess1.Side;
 public class TotalMoveCounts implements BoardEvaluator {
 
     @Override
-    public int evaluate(final Board board) {
+    public int evaluate(final Board board, List<Integer> statList) {
         final int moveCountWhite = board.getMovesSorted(Side.White).size();
         final int moveCountBlack = board.getMovesSorted(Side.Black).size();
         return moveCountWhite - moveCountBlack;
