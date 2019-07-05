@@ -21,32 +21,22 @@ import static java.lang.Math.abs;
 public class Main {
 
     private static ChessConfig config = null;
-    private static AIMoveSelector moveAgent = null;
 
     private static void onAppExit() {
-        if (moveAgent != null) {
-            try {
-                // Reset display attributes
-                System.out.print("\r" + resetAll);
+        // Reset display attributes
+        System.out.print("\r" + resetAll);
 
-                // clear display to end of line
-                System.out.print("\r" + clearEOL);
+        // clear display to end of line
+        System.out.print("\r" + clearEOL);
 
-                // Turn the cursor back on
-                System.out.println(cursOn);
-
-                moveAgent.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                moveAgent = null;
-                System.out.println("Goodbye \uD83D\uDE0E");
-            }
-        }
+        // Turn the cursor back on
+        System.out.println(cursOn);
 
         if (config != null) {
             config.saveConfiguration();
         }
+
+        System.out.println("Goodbye \uD83D\uDE0E");
     }
 
     public static void main(String[] args) {
@@ -65,6 +55,7 @@ public class Main {
 
         config = new ChessConfig("chess.properties");
         config.loadConfiguration();
+        AIMoveSelector moveAgent = null;
         moveAgent = new Minimax(config.maxThreads, config.maxDepth, config.maxSeconds);
 
         playGame(moveAgent, config.humanPlayer);
@@ -126,7 +117,7 @@ public class Main {
                 return getHumanMove(board);
             }
         }
-        return moveAgent.bestMove(board);
+        return agent.bestMove(board);
     }
 
 //    static final String[] charSetAscii = {"   "," p "," n "," b "," r "," q "," k "};
