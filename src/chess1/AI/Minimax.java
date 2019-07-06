@@ -294,6 +294,14 @@ public class Minimax extends AIMoveSelector {
             return evaluator.evaluate(board);
         }
 
+        if (throttle > 0) {
+            try {
+                Thread.sleep(0, throttle);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         for (final Move move : board.getCurrentPlayerMoves()) {
             Board currentBoard = new Board(board);
             currentBoard.executeMove(move);
@@ -339,14 +347,6 @@ public class Minimax extends AIMoveSelector {
 
             if (Thread.currentThread().isInterrupted()) {
                 break;
-            }
-
-            if (throttle > 0) {
-                try {
-                    Thread.sleep(0, throttle);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
         }
         synchronized (processedLock) {
