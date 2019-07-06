@@ -34,6 +34,7 @@ public class Minimax extends AIMoveSelector {
     private int maxThreads;
     private int startDepth;
     private long stopNanos;
+    private int throttle;
 
     @Override
     public void registerDisplayCallback(Consumer<String> cb) {
@@ -74,9 +75,16 @@ public class Minimax extends AIMoveSelector {
         }
     }
 
-    int evaluate(final Board board) {
+    @Override
+    public int evaluate(final Board board) {
         return evaluator.evaluate(board);
     }
+
+    @Override
+    public void setThrottle(int nanos) {
+        throttle = nanos;
+    }
+
 
     public void setDepth(int n) {
         startDepth = n;
@@ -331,6 +339,14 @@ public class Minimax extends AIMoveSelector {
 
             if (Thread.currentThread().isInterrupted()) {
                 break;
+            }
+
+            if (throttle > 0) {
+                try {
+                    Thread.sleep(0, throttle);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
         synchronized (processedLock) {
