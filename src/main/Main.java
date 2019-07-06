@@ -13,11 +13,6 @@ import java.util.Scanner;
 import java.util.List;
 import java.util.Map;
 
-import java.io.IOException;
-
-import static java.lang.Math.abs;
-
-
 public class Main {
 
     private static ChessConfig config = null;
@@ -206,7 +201,7 @@ public class Main {
         String takenMsg0 = sb.toString();
 
         String stat0 = String.format("    Board value:        %,7d : %s's favor",
-                abs(value), ((value < 0) ? config.player2 : ((value == 0) ? "No one" : config.player1)));
+                Math.abs(value), ((value < 0) ? config.player2 : ((value == 0) ? "No one" : config.player1)));
         stat0 += clearEOL;
 
         String stat1 = "";
@@ -457,7 +452,7 @@ public class Main {
             int type = from.getType();
             String pieceName = getPieceName(type);
             String cap = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
-            boolean isCastle = (type == Piece.King) && abs(move.getFromCol() - move.getToCol()) == 2;
+            boolean isCastle = (type == Piece.King) && (Math.abs(move.getFromCol() - move.getToCol()) == 2);
 
             if (isCastle) {
                 sb.append("Castle on ").append((from.getCol() == 4) ? "king" : "queen").append("'s side. ");
