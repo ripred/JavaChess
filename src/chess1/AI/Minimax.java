@@ -290,10 +290,6 @@ public class Minimax extends AIMoveSelector {
         int value = maximize ? Piece.MIN_VALUE : Piece.MAX_VALUE;
         int movesExamined = 0;
 
-        if (depth <= 0) {
-            return evaluator.evaluate(board);
-        }
-
         if (throttle > 0) {
             try {
                 Thread.sleep(0, throttle);
@@ -303,6 +299,12 @@ public class Minimax extends AIMoveSelector {
         }
 
         for (final Move move : board.getCurrentPlayerMoves()) {
+            if (depth <= 0) {
+                if ((move.getValue() ==  0) || ((startDepth - depth) > 6)) {
+                    return evaluator.evaluate(board);
+                }
+            }
+
             Board currentBoard = new Board(board);
             currentBoard.executeMove(move);
             currentBoard.advanceTurn();
