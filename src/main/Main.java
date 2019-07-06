@@ -55,15 +55,15 @@ public class Main {
 
         config = new ChessConfig("chess.properties");
         config.loadConfiguration();
-        AIMoveSelector moveAgent = null;
+        AIMoveSelector moveAgent;
         moveAgent = new Minimax(config.maxThreads, config.maxDepth, config.maxSeconds);
 
-        playGame(moveAgent, config.humanPlayer);
+        playGame(moveAgent);
 
         onAppExit();
     }
 
-    private static void playGame(final AIMoveSelector moveAgent, final boolean isHuman) {
+    private static void playGame(final AIMoveSelector moveAgent) {
         for (int n=0; n < 20; ++n) {
             System.out.println("\n");
         }
@@ -74,7 +74,6 @@ public class Main {
 
         moveAgent.registerDisplayCallback(new ThreadMsgConsumer(board, moveAgent));
 
-        int humanSide = config.humanMovesFirst ? Side.White : Side.Black;
         long gameStart = System.nanoTime();
         long moveStart;
         Move move;
@@ -192,7 +191,7 @@ public class Main {
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(" " + charSetUnicodeWhite[type].trim());
+            sb.append(" ").append(charSetUnicodeWhite[type].trim());
         }
         String takenMsg1 = sb.toString();
 
@@ -202,7 +201,7 @@ public class Main {
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
             }
-            sb.append(" " + charSetUnicodeWhite[type].trim());
+            sb.append(" ").append(charSetUnicodeWhite[type].trim());
         }
         String takenMsg0 = sb.toString();
 
