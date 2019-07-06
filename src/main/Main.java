@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.Scanner;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main {
 
@@ -50,8 +52,25 @@ public class Main {
 
         config = new ChessConfig("chess.properties");
         config.loadConfiguration();
-        AIMoveSelector moveAgent;
-        moveAgent = new Minimax(config.maxThreads, config.maxDepth, config.maxSeconds);
+
+        Map<String, String> options = new HashMap<>();
+
+        if (args.length > 0) {
+            Pattern pat = Pattern.compile("(-[a-zA-Z0-9]+)\\s*[=]?\\s*([^\\s]*)");
+            for (String arg:args) {
+                Matcher match = pat.matcher(arg);
+                if (match.find()) {
+                    String key = match.group(1).substring(1);
+                    String value = match.group(2);
+                    options.put(key, value);
+                }
+            }
+        }
+
+        AIMoveSelector moveAgent = new Minimax(config.maxThreads, config.maxDepth, config.maxSeconds);
+
+        if (options.get("t") != null)
+            moveAgent.setThrottle(Integer.valueOf(options.get("t")));
 
         playGame(moveAgent);
 
@@ -172,14 +191,6 @@ public class Main {
         final String blkGivePath = mergeColors24(victimsShade, blkBack, false);
         final String whtGivePath = mergeColors24(victimsShade, whtBack, false);
 
-        final long timeSpent = (System.nanoTime() - startTime) / 1_000_000_000L;
-        final int numProcessed = agent.getNumMovesExamined();
-        final long numPerSec = (timeSpent == 0) ? numProcessed : (numProcessed / timeSpent);
-
-        final BoardEvaluator evaluator = new PieceValuesPlusPos();
-
-        final int value = evaluator.evaluate(board);
-
         StringBuilder sb = new StringBuilder("    " + config.player2 + " taken:");
         for (final int type:board.getPiecesTaken1()) {
             sb.append(whtForeB);
@@ -200,8 +211,15 @@ public class Main {
         }
         String takenMsg0 = sb.toString();
 
-        String stat0 = String.format("    Board value:        %,7d : %s's favor",
-                Math.abs(value), ((value < 0) ? config.player2 : ((value == 0) ? "No one" : config.player1)));
+        int value = agent.evaluate(board);
+        int score = Math.abs(value);
+
+        String stat0 = String.format("    Board value:        %,7d", score);
+        if (score != 0) {
+            stat0 += " : ";
+            stat0 += (value < 0) ? config.player2 : config.player1;
+            stat0 += "'s favor";
+        }
         stat0 += clearEOL;
 
         String stat1 = "";
@@ -209,9 +227,13 @@ public class Main {
         String stat3 = "";
 
         if (startTime != 0) {
-            stat1 = String.format("    Time spent:      %,10ds%s",
-                    timeSpent,
-                    (timeSpent == config.maxSeconds && timeSpent != 0) ? " (hit cfg limit)" : "");
+            long timeSpent = (System.nanoTime() - startTime) / 1_000_000_000L;
+            int numProcessed = agent.getNumMovesExamined();
+            long numPerSec = (timeSpent == 0) ? numProcessed : (numProcessed / timeSpent);
+
+            String timeLimit = (timeSpent == config.maxSeconds && timeSpent != 0) ? " (hit cfg limit)" : "";
+
+            stat1 = String.format("    Time spent:      %,10ds%s", timeSpent, timeLimit);
             stat2 = String.format("    Moves examined:  %,10d", numProcessed);
             stat3 = String.format("    (per second):    %,10d", numPerSec);
         }
@@ -247,6 +269,8 @@ public class Main {
             System.out.println(clearEOL);
         }
 
+        Move lastMove = board.getLastMove();
+
         for (int row=0; row < 8; ++row) {
             System.out.print(" " + (8-row) + " ");
 
@@ -266,7 +290,6 @@ public class Main {
                     fmtAttr = boldAttr;
                 }
 
-                Move lastMove = board.getLastMove();
                 if (lastMove.getToCol() == col && lastMove.getToRow() == row) {
                     fmtClrFore = blkPiece ? blkMoved : whtMoved;
                 }
@@ -274,7 +297,7 @@ public class Main {
                 if (type == Piece.King
                         && board.getTurn() == spot.getSide()
                         && board.kingInCheck(board, board.getTurn()).size() > 0) {
-                    fmtClrFore = ((spot.getSide() == Side.Black) ? blkCheck : whtCheck);
+                    fmtClrFore = blkPiece ? blkCheck : whtCheck;
                     fmtAttr = boldAttr;
                 }
 
@@ -444,24 +467,31 @@ public class Main {
     }
 
     private static String getMoveDesc(final Board board, final Move move) {
+        if (move == null) return "";
+
         StringBuilder sb = new StringBuilder();
 
-        if (move != null) {
-            Spot from = board.getSpot(move.getFromCol(), move.getFromRow());
-            Spot to = board.getSpot(move.getToCol(), move.getToRow());
-            int type = from.getType();
-            String pieceName = getPieceName(type);
-            String cap = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
-            boolean isCastle = (type == Piece.King) && (Math.abs(move.getFromCol() - move.getToCol()) == 2);
-
-            if (isCastle) {
-                sb.append("Castle on ").append((from.getCol() == 4) ? "king" : "queen").append("'s side. ");
-            } else {
-                sb.append(pieceName)
-                        .append(" from ").append(posString(move.getFromCol(), move.getFromRow()))
-                        .append(" to ").append(posString(move.getToCol(), move.getToRow()))
-                        .append(cap);
+        Spot from = board.getSpot(move.getFromCol(), move.getFromRow());
+        Spot to = board.getSpot(move.getToCol(), move.getToRow());
+        int type = from.getType();
+        String pieceName = getPieceName(type);
+        String suffix = to.isEmpty() ? "" : " capturing " + getPieceName(to.getType());
+        if (type == Piece.Pawn) {
+            if ((board.getTurn() == Side.Black && move.getToRow() == 7)
+             || (board.getTurn() == Side.White && move.getToRow() == 0)) {
+                if (!suffix.isEmpty()) suffix += " and ";
+                suffix += " is promoted to queen! ";
             }
+        }
+        boolean isCastle = (type == Piece.King) && (Math.abs(move.getFromCol() - move.getToCol()) == 2);
+
+        if (isCastle) {
+            sb.append("Castle on ").append((to.getCol() == 6) ? "king" : "queen").append("'s side. ");
+        } else {
+            sb.append(pieceName)
+                    .append(" from ").append(posString(move.getFromCol(), move.getFromRow()))
+                    .append(" to ").append(posString(move.getToCol(), move.getToRow()))
+                    .append(suffix);
         }
 
         Board board1 = new Board(board);
