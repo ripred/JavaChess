@@ -29,28 +29,15 @@ public class Minimax extends AIMoveSelector {
     private final BoardEvaluator evaluator = new PieceValuesPlusPos();
     private final Object processedLock = new Object();
     private Consumer<String> callback;
+    private FutureTask[] threadStack;
     private Integer movesProcessed;
     private long maxSeconds;
     private int maxThreads;
+    private int numThreads;
     private int startDepth;
     private long stopNanos;
+    private BestMove best;
     private int throttle;
-
-    @Override
-    public void registerDisplayCallback(Consumer<String> cb) {
-        callback = cb;
-    }
-
-    private void printMsg(String msg) {
-        if (callback != null) {
-            callback.accept(msg);
-        }
-    }
-
-    @Override
-    public int getMaxThreads() {
-        return maxThreads;
-    }
 
     public Minimax(int maxThreads, int depth, int maxSeconds) {
         super(maxThreads);
@@ -59,6 +46,19 @@ public class Minimax extends AIMoveSelector {
         this.movesProcessed = 0;
         this.callback = null;
         this.maxThreads = 0;
+        this.best = null;
+        this.threadStack = null;
+        this.numThreads = 0;
+    }
+
+    @Override
+    public void registerDisplayCallback(Consumer<String> cb) {
+        callback = cb;
+    }
+
+    @Override
+    public int getMaxThreads() {
+        return maxThreads;
     }
 
     @Override
@@ -85,13 +85,10 @@ public class Minimax extends AIMoveSelector {
         throttle = nanos;
     }
 
-
-    public void setDepth(int n) {
-        startDepth = n;
-    }
-
-    public int getDepth() {
-        return startDepth;
+    private void printMsg(String msg) {
+        if (callback != null) {
+            callback.accept(msg);
+        }
     }
 
     /**
@@ -106,23 +103,22 @@ public class Minimax extends AIMoveSelector {
         final int side = board.getTurn();
         final boolean maximize = (side == Side.White);
         int numMoves = board.getCurrentPlayerMoves().size();
-        BestMove best = new BestMove(maximize);
-
-        movesProcessed = 0;
-        stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
 
         if (numMoves == 1) {
             // We have only one move so nothing the other side can do in response will change
             // what move we return so just return it now and save the recursive depth cost.
-            synchronized (processedLock) {
-                ++movesProcessed;
-            }
+            addNumMovesExamined(1);
             return board.getCurrentPlayerMoves().get(0);
         }
 
-        // Array to keep the threads in
-        FutureTask[] lookAheadThreads = new FutureTask[numMoves];
-        int numThreads = 0;
+        // cancel any existing thread stack and create a new array to keep the new threads in
+        cancelThreadStack();
+        threadStack = new FutureTask[numMoves];
+        numThreads = 0;
+
+        stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
+        best = new BestMove(maximize);
+        movesProcessed = 0;
 
         // Loop through all of the moves launching a thread for each one so each can go explore
         // what good board valuations we have in the future of this move and keep track of the best one
@@ -139,18 +135,23 @@ public class Minimax extends AIMoveSelector {
             }
 
             FutureTask<BestMove> task = new FutureTask<>(lookAheadThread);
-            lookAheadThreads[numThreads++] = task;
+            threadStack[numThreads++] = task;
             maxThreads = Integer.max(maxThreads, numThreads);
             Thread t = new Thread(task);
-            t.setPriority(Thread.MIN_PRIORITY);
             t.start();
         }
 
         // Now we wait on all of the threads to finish so we can see which has the best score
         for (int i = 0; i < numThreads; ++i) {
+            if (best.endGameFound) {
+                cancelThreadStack();
+                break;
+            }
+
             BestMove threadResult = null;
+
             try {
-                threadResult = (BestMove) lookAheadThreads[i].get();
+                threadResult = (BestMove) threadStack[i].get();
             } catch (Exception e) {
                 System.out.println("\nWe're having problems waiting for move threads to finish..\n");
                 e.printStackTrace();
@@ -158,10 +159,7 @@ public class Minimax extends AIMoveSelector {
 
             if (threadResult != null && threadResult.endGameFound) {
                 best = threadResult;
-
-                for (int k = i + 1; k < numThreads; ++k) {
-                    lookAheadThreads[k].cancel(true);
-                }
+                cancelThreadStack();
                 break;
             }
 
@@ -177,9 +175,21 @@ public class Minimax extends AIMoveSelector {
 
             best.move = checkEndGameCornerCases(board, best.move);
         }
+
+        threadStack = null;
+        numThreads = 0;
         return best.move;
     }
 
+    private void cancelThreadStack() {
+        if (threadStack == null) return;
+
+        for (int i=0; i < numThreads; i++) {
+            threadStack[i].cancel(true);
+        }
+        threadStack = null;
+        numThreads = 0;
+    }
 
     private Move checkEndGameCornerCases(final Board board, Move bestMove) {
         //
