@@ -14,15 +14,19 @@ public abstract class AIMoveSelector implements Closeable {
         threadPoolSize = maxThreads;
     }
 
-    public abstract void setThrottle(int nanos);
+    public abstract Move bestMove(final Board board, boolean returnImmediate);
 
-    public abstract Move bestMove(final Board board);
+    public abstract boolean moveSearchIsDone();
+
+    public abstract Move getBestMove();
+
+    public abstract int evaluate(Board board);
+
+    public abstract void setThrottle(int nanos);
 
     public abstract int getNumMovesExamined();
 
     public abstract void addNumMovesExamined(int n);
-
-    public abstract int evaluate(Board board);
 
     public abstract int getMaxThreads();
 
