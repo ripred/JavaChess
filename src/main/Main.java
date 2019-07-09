@@ -2,11 +2,13 @@ package main;
 
 import chess1.*;
 import chess1.AI.*;
+
 import static main.Ansi.*;
 
-import sun.misc.SignalHandler;
-import sun.misc.Signal;
-
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
@@ -15,9 +17,15 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
+
+
 public class Main {
 
     private static ChessConfig config = null;
+
+    private static Map<String, String> options = null;
 
     private static void onAppExit() {
         // Reset display attributes
@@ -36,7 +44,7 @@ public class Main {
         System.out.println("Goodbye \uD83D\uDE0E");
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
         SignalHandler sigHandler = sig -> {
             // handle SIGINT
@@ -53,7 +61,7 @@ public class Main {
         config = new ChessConfig("chess.properties");
         config.loadConfiguration();
 
-        Map<String, String> options = new HashMap<>();
+        options = new HashMap<>();
 
         if (args.length > 0) {
             Pattern pat = Pattern.compile("(-[a-zA-Z0-9]+)\\s*[=]?\\s*([^\\s]*)");
@@ -88,6 +96,7 @@ public class Main {
 
         moveAgent.registerDisplayCallback(new ThreadMsgConsumer(board, moveAgent));
 
+        String moveDesc = null;
         long gameStart = System.nanoTime();
         long moveStart;
         Move move;
@@ -95,72 +104,105 @@ public class Main {
 //        board.initTest();
 
         System.out.println();
-        showBoard(board, null, moveAgent, 0);
+        showBoard(board, null, moveAgent, 0, 0);
 
-        System.out.print(getTurnPrompt(board));
         moveStart = System.nanoTime();
-        move = getNextPlayersMove(board, moveAgent);
+        move = getNextPlayersMove(board, moveAgent, moveDesc, moveStart, gameStart);
 
         while (move != null) {
-            String moveDesc = getMoveDesc(board, move);
+            moveDesc = getMoveDesc(board, move);
 
             board.executeMove(move);
             board.advanceTurn();
 
             System.out.println();
-            showBoard(board, moveDesc, moveAgent, moveStart);
+            showBoard(board, moveDesc, moveAgent, moveStart, gameStart);
 
             // Check for draw-by-repetition (same made too many times in a row by a player)
             if (board.checkDrawByRepetition()) {
                 break;
             }
 
-            System.out.print(getTurnPrompt(board));
             moveStart = System.nanoTime();
-            move = getNextPlayersMove(board, moveAgent);
+            move = getNextPlayersMove(board, moveAgent, moveDesc, moveStart, gameStart);
         }
-
-        showGameSummary(board);
-        showTotalGameTime(gameStart);
     }
 
-    private static Move getNextPlayersMove(Board board, AIMoveSelector agent) {
+    private static Move getNextPlayersMove(Board board, AIMoveSelector agent, String moveDesc, long moveStart, long gameStart) {
         if (config.humanPlayer) {
             if ((board.getTurn() == Side.White) ^ !config.humanMovesFirst) {
                 return getHumanMove(board);
             }
         }
-        return agent.bestMove(board);
+
+        Move move = move = agent.bestMove(board, true);
+        while (move == null) {
+            showBoard(board, moveDesc, agent, moveStart, gameStart);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (agent.moveSearchIsDone()) {
+                move = agent.getBestMove();
+                if (move == null) {
+                    // it's still null even after saying the search is
+                    // complete so this is a loss.
+                    return null;
+                }
+            }
+        }
+        return move;
     }
 
 //    static final String[] charSetAscii = {"   "," p "," n "," b "," r "," q "," k "};
     private static final String[] charSetUnicodeWhite = {"   "," ♙ "," ♞ "," ♝ "," ♜ "," ♛ "," ♚ "};
 
-    static void showBoard(final Board board, final String moveDesc, final AIMoveSelector agent, final long startTime) {
+    static void showBoard(final Board board, final String moveDesc, final AIMoveSelector agent, long moveStart, long gameStart) {
+        String output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, false);
+        System.out.print(output);
+
+        if (!options.containsKey("outfile"))
+            return;
+
+        String filename = "output.txt";
+        output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, true);
+        try {
+            BufferedWriter writer = writer = new BufferedWriter(new FileWriter(filename));
+            writer.write(output);
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static String showBoardImpl(final Board board, final String moveDesc, final AIMoveSelector agent, long moveStart, long gameStart, boolean forFile) {
         // The screen row to begin displaying on
         int topRow = 1;
 
+        StringWriter writer = new StringWriter();
+
         // The background colors of the squares
-        String blkBack  = bg24b(142, 142, 142);
-        String whtBack  = bg24b(204, 204, 204);
+        String blkBack = bg24b(142, 142, 142);
+        String whtBack = bg24b(204, 204, 204);
 
         // The colors of the pieces
-        String blkForeB = fg24b( 64,  64,  64);
-        String blkForeW = fg24b(  0,   0,   0);
+        String blkForeB = fg24b(64, 64, 64);
+        String blkForeW = fg24b(0, 0, 0);
         String whtForeB = fg24b(255, 255, 255);
         String whtForeW = fg24b(255, 255, 255);
 
         // The colors of the last moved piece
-        String blkMoved = fg24b( 128,   0,  0);
-        String whtMoved = fg24b( 192, 192,  0);
+        String blkMoved = fg24b(128, 0, 0);
+        String whtMoved = fg24b(192, 192, 0);
 
         // The colors of the kings in check
-        String blkCheck = fg24b( 192, 128,  0);
-        String whtCheck = fg24b( 192, 128,  0);
+        String blkCheck = fg24b(192, 128, 0);
+        String whtCheck = fg24b(192, 128, 0);
 
         // The color influences on victim and target positions
-        String targetsShade = bg24b(  0,    0, 64);
-        String victimsShade = bg24b(  64,   0,   0);
+        String targetsShade = bg24b(0, 0, 64);
+        String victimsShade = bg24b(64, 0, 0);
 
         // Override with user-config values if valid:
         blkBack = cfgBg(config.blkBack, blkBack);
@@ -180,6 +222,10 @@ public class Main {
         targetsShade = cfgBg(config.targetsShade, targetsShade);
         victimsShade = cfgBg(config.victimsShade, victimsShade);
 
+        // The colors used to show spots adjacent to the king
+        String blkClrAdjacent = mergeColors24(bg24b(128, 128, 0), blkBack, false);
+        String whtClrAdjacent = mergeColors24(bg24b(142, 142, 0), whtBack, false);
+
         // The colors of paths to opponent pieces that we can take
         // current player moves tends towards blues
         //
@@ -192,7 +238,7 @@ public class Main {
         final String whtGivePath = mergeColors24(victimsShade, whtBack, false);
 
         StringBuilder sb = new StringBuilder("    " + config.player2 + " taken:");
-        for (final int type:board.getPiecesTaken1()) {
+        for (final int type : board.getPiecesTaken1()) {
             sb.append(whtForeB);
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
@@ -202,7 +248,7 @@ public class Main {
         String takenMsg1 = sb.toString();
 
         sb = new StringBuilder("    " + config.player1 + " taken:");
-        for (final int type:board.getPiecesTaken0()) {
+        for (final int type : board.getPiecesTaken0()) {
             sb.append(blkForeB);
             if (type == Piece.Pawn) {
                 sb.append(boldAttr);
@@ -214,20 +260,19 @@ public class Main {
         int value = agent.evaluate(board);
         int score = Math.abs(value);
 
-        String stat0 = String.format("    Board value:        %,7d", score);
+        String boardScore = String.format("    Board value:        %,7d", score);
         if (score != 0) {
-            stat0 += " : ";
-            stat0 += (value < 0) ? config.player2 : config.player1;
-            stat0 += "'s favor";
+            boardScore += " : ";
+            boardScore += (value < 0) ? config.player2 : config.player1;
+            boardScore += "'s favor";
         }
-        stat0 += clearEOL;
 
         String stat1 = "";
         String stat2 = "";
         String stat3 = "";
 
-        if (startTime != 0) {
-            long timeSpent = (System.nanoTime() - startTime) / 1_000_000_000L;
+        if (moveStart != 0) {
+            long timeSpent = (System.nanoTime() - moveStart) / 1_000_000_000L;
             int numProcessed = agent.getNumMovesExamined();
             long numPerSec = (timeSpent == 0) ? numProcessed : (numProcessed / timeSpent);
 
@@ -237,50 +282,79 @@ public class Main {
             stat2 = String.format("    Moves examined:  %,10d", numProcessed);
             stat3 = String.format("    (per second):    %,10d", numPerSec);
         }
-        stat1 += clearEOL;
 
-        int otherSide = board.getTurn() == Side.Black ? Side.White :Side.Black;
+        int side = board.getTurn();
+        int otherSide = board.getTurn() == Side.Black ? Side.White : Side.Black;
 
         // get maps of pieces under attack for both sides
-        Map<Move, List<Spot>> targets = createTargetMap(board, board.getTurn());
+        Map<Move, List<Spot>> targets = createTargetMap(board, side);
         Map<Move, List<Spot>> victims = createTargetMap(board, otherSide);
 
         // ====================================================================
 
-        // Move the cursor to the specified row
-        System.out.print(cursPos(1, topRow));
+        if (!forFile) {
+            writer.write(cursPos(1, topRow));
 
-        // Turn off the cursor
-        System.out.print(cursOff);
+            // Turn off the cursor
+            writer.write(cursOff);
+        }
 
         if (moveDesc != null) {
-            System.out.print(moveDesc);
-            System.out.print(clearEOL); // clear display to end of line
+            writer.write(moveDesc);
+            if (!forFile) {
+                writer.write(clearEOL);
+            }
         }
-        System.out.println();
+        writer.write("\n");
 
         List<Move> checkMoves = board.kingInCheck(board, board.getTurn());
         if (checkMoves.size() > 0) {
             Move move = checkMoves.get(0);
-            System.out.print((board.getTurn() == Side.Black) ? config.player2 : config.player1);
-            System.out.print(" is in check from ");
-            System.out.println(String.format("%s", posString(move.getFromCol(), move.getFromRow())));
-        } else {
-            System.out.println(clearEOL);
+            writer.write((side == Side.Black) ? config.player2 : config.player1);
+            writer.write(" is in check from ");
+            writer.write(String.format("%s", posString(move.getFromCol(), move.getFromRow())));
         }
+        if (!forFile) {
+            writer.write(clearEOL);
+        }
+        writer.write("\n");
 
         Move lastMove = board.getLastMove();
 
-        for (int row=0; row < 8; ++row) {
-            System.out.print(" " + (8-row) + " ");
+        // The color used to highlight the best move
+        String bestFromBack = bg24b(0, 160, 160);
+        String bestToBack = bg24b(0, 160, 160);
 
-            for (int col=0; col < 8; ++col) {
-                final boolean blkSq = (((row + col) % 2) == 0);
-                final String back = blkSq ? blkBack : whtBack;
-                final Spot spot = board.getSpot(col, row);
-                final int type = spot.getType();
-                final boolean blkPiece = (spot.getSide() == Side.Black);
-                final String fore = blkPiece ? blkForeW : whtForeW;
+        int bestFromCol = 8;
+        int bestFromRow = 8;
+        int bestToCol = 8;
+        int bestToRow = 8;
+        if (!agent.moveSearchIsDone()) {
+            Move best = agent.getBestMove();
+            if (best != null) {
+                bestFromCol = best.getFromCol();
+                bestFromRow = best.getFromRow();
+                bestFromBack = ((bestFromCol + bestFromRow) % 2) == 0 ?
+                        mergeColors24(bestFromBack, blkBack, false) :
+                        mergeColors24(bestFromBack, whtBack, false);
+                bestToCol = best.getToCol();
+                bestToRow = best.getToRow();
+                bestToBack = ((bestToCol + bestToRow) % 2) == 0 ?
+                        mergeColors24(bestToBack, blkBack, false) :
+                        mergeColors24(bestToBack, whtBack, false);
+            }
+        }
+
+        for (int row = 0; row < 8; ++row) {
+            writer.write(resetAll + " " + (8 - row) + " ");
+
+            for (int col = 0; col < 8; ++col) {
+                boolean blkSq = (((row + col) % 2) == 0);
+                String back = blkSq ? blkBack : whtBack;
+                Spot spot = board.getSpot(col, row);
+                int type = spot.getType();
+                boolean blkPiece = (spot.getSide() == Side.Black);
+                String fore = blkPiece ? blkForeW : whtForeW;
 
                 String fmtClrBack = back;
                 String fmtClrFore = fore;
@@ -295,10 +369,31 @@ public class Main {
                 }
 
                 if (type == Piece.King
-                        && board.getTurn() == spot.getSide()
-                        && board.kingInCheck(board, board.getTurn()).size() > 0) {
+                        && side == spot.getSide()
+                        && board.kingInCheck(board, side).size() > 0) {
                     fmtClrFore = blkPiece ? blkCheck : whtCheck;
                     fmtAttr = boldAttr;
+                }
+
+                if (board.getAdjacentBonus()) {
+                    for (Spot adjSpot : board.getBlkKingAdjacent()) {
+                        if (adjSpot.getCol() == col && adjSpot.getRow() == row) {
+                            if (blkSq)
+                                fmtClrBack = blkClrAdjacent;
+                            else
+                                fmtClrBack = whtClrAdjacent;
+                            break;
+                        }
+                    }
+                    for (Spot adjSpot : board.getWhtKingAdjacent()) {
+                        if (adjSpot.getCol() == col && adjSpot.getRow() == row) {
+                            if (blkSq)
+                                fmtClrBack = blkClrAdjacent;
+                            else
+                                fmtClrBack = whtClrAdjacent;
+                            break;
+                        }
+                    }
                 }
 
                 String clrTake = (blkSq ? blkTakePath : whtTakePath);
@@ -309,7 +404,7 @@ public class Main {
 
                 boolean showTargets = config.showTargetPaths;
                 boolean showVictims = config.showVictimPaths;
-                boolean flipPerspective = (board.getTurn() == Side.Black);
+                boolean flipPerspective = (side == Side.Black);
 
                 if (spotIsTarget && !spotIsVictim) {
                     if (showTargets) {
@@ -326,23 +421,54 @@ public class Main {
                                 : mergeColors24(clrTake, clrGive, false);
                     }
                 }
-                System.out.print(fmtClrBack + fmtClrFore + fmtAttr + charSetUnicodeWhite[type]);
+
+                if (bestFromCol == col && bestFromRow == row) {
+                    fmtClrBack = bestFromBack;
+                } else if (bestToCol == col && bestToRow == row) {
+                    fmtClrBack = bestToBack;
+                }
+
+                writer.write(fmtClrBack + fmtClrFore + fmtAttr + charSetUnicodeWhite[type]);
             }
-            System.out.print(resetAll);
-            String[] rowStrings = {takenMsg0, takenMsg1, "", "", stat0, stat1, stat2, stat3};
-            System.out.println(rowStrings[row]);
+            writer.write(resetAll);
+            String[] rowStrings = {boardScore, takenMsg0, takenMsg1, "", "", stat1, stat2, stat3};
+
+            writer.write(rowStrings[row] + "\r\n");
+
+            if (!forFile) {
+                writer.write(clearEOL);
+            }
         }
-        System.out.println("    A  B  C  D  E  F  G  H ");
-        System.out.println();
+        writer.write("    A  B  C  D  E  F  G  H ");
+        writer.write("\n");
+        writer.write("\n");
+
+        writer.write(getTurnPrompt(board));
+
+        if (board.getCurrentPlayerMoves().size() == 0 ||
+                board.getOtherPlayerMoves().size() == 0 ||
+                board.checkDrawByRepetition()) {
+            writer.write("\r" + getGameSummary(board));
+            writer.write(getTotalGameTime(gameStart));
+        }
+
+        try {
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return writer.toString();
     }
 
-    private static void showGameSummary(final Board board) {
+    private static String getGameSummary(final Board board) {
+        String result = "";
         if (board.checkDrawByRepetition()) {
             Move lastMove = board.getLastMove();
-            System.out.println(String.format("Draw by-repetition!  Move from %s to %s made %d times in a row!",
+            result = String.format("Draw by-repetition!  Move from %s to %s made %d times in a row!\n",
                     posString(lastMove.getFromCol(), lastMove.getFromRow()),
                     posString(lastMove.getToCol(), lastMove.getToRow()),
-                    board.getMaxAllowedRepetitions()));
+                    board.getMaxAllowedRepetitions());
         }
 
         List<Move> checkMateBlack = board.kingInCheck(board, Side.Black);
@@ -353,33 +479,35 @@ public class Main {
         assert numMoveBlack > 0 || numMoveWhite > 0 : "Internal error: Both players have 0 moves";
 
         if (checkMateBlack.size() > 0 && checkMateWhite.size() > 0) {
-            System.out.println("Internal error: Both players are in check");
-            System.out.println(config.player1 + "'s King in check from:");
+            result += "Internal error: Both players are in check\n";
+            result += config.player1 + "'s King in check from:\n";
             for (Move m:checkMateWhite)
-                System.out.println("    " + m.toString());
-            System.out.println();
+                result += "    " + m.toString() + "\n";
+            result += "\n";
 
-            System.out.println(config.player2 + "'s King in check from:");
+            result += config.player2 + "'s King in check from:\n";
             for (Move m:checkMateBlack)
-                System.out.println("    " + m.toString());
-            System.out.println();
+                result += "    " + m.toString();
+            result += "\n";
         }
 
-        System.out.println();
+        result += "\n";
 
         if (numMoveWhite == 0) {
-            System.out.println(((checkMateWhite.size() > 0) ? "Checkmate!  " : "Stalemate!  ") + config.player2 + " Wins!");
+            result += ((checkMateWhite.size() > 0) ? "Checkmate!  " : "Stalemate!  ") + config.player2 + " Wins!\n";
         } else if (numMoveBlack == 0) {
-            System.out.println(((checkMateBlack.size() > 0) ? "Checkmate!  " : "Stalemate!  ") + config.player1 + " Wins!");
+            result += ((checkMateBlack.size() > 0) ? "Checkmate!  " : "Stalemate!  ") + config.player1 + " Wins!\n";
         }
+        return result;
     }
-    private static void showTotalGameTime(long startTime) {
+
+    private static String getTotalGameTime(long startTime) {
         long totalTime = (System.nanoTime() - startTime) / 1_000_000_000L;
         int hours   = (int)(totalTime / 3600L);
         totalTime  -= hours * 3600L;
         int minutes = (int)(totalTime / 60L);
         totalTime  -= minutes * 60L;
-        System.out.println(String.format("Total Game Time: %02d:%02d:%02d", hours, minutes, totalTime));
+        return String.format("Total Game Time: %02d:%02d:%02d\n", hours, minutes, totalTime);
     }
 
     private static String cfgBg(final String key, final String def) {
@@ -482,6 +610,9 @@ public class Main {
                 if (!suffix.isEmpty()) suffix += " and ";
                 suffix += " is promoted to queen! ";
             }
+            if (to.isEmpty() && move.getFromCol() != move.getToCol()) {
+                suffix = " en-passant capturing Pawn!";
+            }
         }
         boolean isCastle = (type == Piece.King) && (Math.abs(move.getFromCol() - move.getToCol()) == 2);
 
@@ -514,7 +645,8 @@ public class Main {
         return String.format("%d: %s's Turn: ",
                 board.getNumTurns(),
                 (board.getTurn() == Side.White) ? config.player1 : config.player2)
-                + clearEOL;
+//                + clearEOL
+                ;
     }
 
     private static char toPos(int nibble) {

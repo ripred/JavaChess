@@ -31,6 +31,7 @@ public class Minimax extends AIMoveSelector {
     private Consumer<String> callback;
     private FutureTask[] threadStack;
     private Integer movesProcessed;
+    private boolean maximize;
     private long maxSeconds;
     private int maxThreads;
     private int numThreads;
@@ -38,17 +39,40 @@ public class Minimax extends AIMoveSelector {
     private long stopNanos;
     private BestMove best;
     private int throttle;
+    private Thread currentSearch;
 
     public Minimax(int maxThreads, int depth, int maxSeconds) {
         super(maxThreads);
+        this.best = new BestMove(false);
         this.maxSeconds = maxSeconds;
+        this.currentSearch = null;
         this.startDepth = depth;
         this.movesProcessed = 0;
+        this.threadStack = null;
+        this.maximize = false;
         this.callback = null;
         this.maxThreads = 0;
-        this.best = null;
-        this.threadStack = null;
         this.numThreads = 0;
+    }
+
+    @Override
+    public boolean moveSearchIsDone() {
+        if (currentSearch == null) return true;
+        if (currentSearch.isAlive()) {
+            return false;
+        }
+        try {
+            currentSearch.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        currentSearch = null;
+        return true;
+    }
+
+    @Override
+    public Move getBestMove() {
+        return best.move;
     }
 
     @Override
@@ -96,12 +120,13 @@ public class Minimax extends AIMoveSelector {
      * AIMoveSelector interface using the minimax algorithm.
      *
      * @param board The board state to find the best move for the current player for
+     * @param
      * @return the best move for the current player or null if there are no moves.
      */
     @Override
-    public Move bestMove(final Board board) {
+    public Move bestMove(final Board board, boolean returnImmediate) {
         final int side = board.getTurn();
-        final boolean maximize = (side == Side.White);
+        maximize = (side == Side.White);
         int numMoves = board.getCurrentPlayerMoves().size();
 
         if (numMoves == 1) {
@@ -119,6 +144,7 @@ public class Minimax extends AIMoveSelector {
         stopNanos = System.nanoTime() + (maxSeconds * 1_000_000_000L);
         best = new BestMove(maximize);
         movesProcessed = 0;
+
 
         // Loop through all of the moves launching a thread for each one so each can go explore
         // what good board valuations we have in the future of this move and keep track of the best one
@@ -138,27 +164,43 @@ public class Minimax extends AIMoveSelector {
             threadStack[numThreads++] = task;
             maxThreads = Integer.max(maxThreads, numThreads);
             Thread t = new Thread(task);
+            t.setName(String.format("Turn: %3d Move: %02d", board.getNumTurns(), numThreads));
             t.start();
         }
 
+        if (returnImmediate) {
+            if (currentSearch != null) {
+                currentSearch.interrupt();
+            }
+            currentSearch = new Thread(() -> {
+                finishCurrentSearch(board);
+            });
+            currentSearch.start();
+            return best.move;
+        }
+
+        return finishCurrentSearch(board);
+    }
+
+    private Move finishCurrentSearch(final Board board) {
         // Now we wait on all of the threads to finish so we can see which has the best score
         for (int i = 0; i < numThreads; ++i) {
-            if (best.endGameFound) {
-                cancelThreadStack();
-                break;
-            }
-
             BestMove threadResult = null;
 
             try {
                 threadResult = (BestMove) threadStack[i].get();
             } catch (Exception e) {
-                System.out.println("\nWe're having problems waiting for move threads to finish..\n");
-                e.printStackTrace();
+//                System.out.println("\nWe're having problems waiting for move threads to finish..\n");
+//                e.printStackTrace();
             }
 
             if (threadResult != null && threadResult.endGameFound) {
                 best = threadResult;
+                cancelThreadStack();
+                break;
+            }
+
+            if (best.endGameFound) {
                 cancelThreadStack();
                 break;
             }
@@ -176,19 +218,14 @@ public class Minimax extends AIMoveSelector {
             best.move = checkEndGameCornerCases(board, best.move);
         }
 
-        threadStack = null;
+//        threadStack = null;
         numThreads = 0;
         return best.move;
     }
 
     private void cancelThreadStack() {
         if (threadStack == null) return;
-
-        for (int i=0; i < numThreads; i++) {
-            threadStack[i].cancel(true);
-        }
-        threadStack = null;
-        numThreads = 0;
+        stopNanos = System.nanoTime();
     }
 
     private Move checkEndGameCornerCases(final Board board, Move bestMove) {
@@ -200,7 +237,7 @@ public class Minimax extends AIMoveSelector {
         // If we are getting repetitive and possibly stuck at a local maxima then
         // see if we have any possible pawn advances available and pick one
         // of those instead
-        if (bestMove != null && board.checkDrawByRepetition(bestMove, board.getMaxAllowedRepetitions())) {
+        if (bestMove != null && board.checkDrawByRepetition(bestMove, board.getMaxAllowedRepetitions() - 1)) {
             printMsg("Attempting to end repetition..");
 
             if (ourMoveMap.get(Piece.Pawn).size() > 0) {
@@ -256,25 +293,31 @@ public class Minimax extends AIMoveSelector {
                     theirMoveMap.get(Piece.Queen).size() == 0 &&
                     theirMoveMap.get(Piece.King).size() > 0) {
 
-                // If we have at least one queen and one rook then look further to find a game ending move
-                if (ourMoveMap.get(Piece.Queen).size() > 0 &&
-                        ourMoveMap.get(Piece.Rook).size() > 0 &&
-                        ourMoveMap.get(Piece.King).size() > 0 &&
-                        startDepth < 6) {
+                // if we have pawns march them towards the end row
+                if (ourMoveMap.get(Piece.Pawn).size() > 0) {
+                    bestMove = ourMoveMap.get(Piece.Pawn).get(0);
+                } else {
 
-                    // Extend the depth and search again for a game ending move
-                    startDepth = 6;
-                    printMsg("Looking for game-ending moves...");
+                    // If we have at least one queen and one rook then look further to find a game ending move
+                    if (ourMoveMap.get(Piece.Queen).size() > 0 &&
+                            ourMoveMap.get(Piece.Rook).size() > 0 &&
+                            ourMoveMap.get(Piece.King).size() > 0 &&
+                            startDepth < 6) {
 
-                } else if ((ourMoveMap.get(Piece.Queen).size() > 0)
-                        || (ourMoveMap.get(Piece.Rook).size() > 0) &&
-                        ourMoveMap.get(Piece.King).size() > 0 &&
-                        startDepth < 7) {
+                        // Extend the depth and search again for a game ending move
+                        startDepth = 6;
+                        printMsg("Looking for game-ending moves...");
 
-                    // We have (at minimum) a queen or a rook along with our king so we should
-                    // be able to back them into a corner if we search even further ahead..
-                    startDepth = 7;
-                    printMsg("Looking even further for a game ending move..");
+                    } else if ((ourMoveMap.get(Piece.Queen).size() > 0)
+                            || (ourMoveMap.get(Piece.Rook).size() > 0) &&
+                            ourMoveMap.get(Piece.King).size() > 0 &&
+                            startDepth < 7) {
+
+                        // We have (at minimum) a queen or a rook along with our king so we should
+                        // be able to back them into a corner if we search even further ahead..
+                        startDepth = 7;
+                        printMsg("Looking even further for a game ending move..");
+                    }
                 }
             }
         }
@@ -310,7 +353,7 @@ public class Minimax extends AIMoveSelector {
 
         for (final Move move : board.getCurrentPlayerMoves()) {
             if (depth <= 0) {
-                if ((move.getValue() ==  0) || ((startDepth - depth) > 6)) {
+                if ((move.getValue() ==  0) || depth < -2) {
                     return evaluator.evaluate(board);
                 }
             }
@@ -388,7 +431,7 @@ public class Minimax extends AIMoveSelector {
             pool.shutdownNow();
 
             // Preserve interrupt status
-            Thread.currentThread().interrupt();
+//            Thread.currentThread().interrupt();
         }
     }
 }

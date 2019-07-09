@@ -15,7 +15,7 @@ public class ThreadMsgConsumer implements Consumer<String> {
 
     @Override
     public void accept(String s) {
-        Main.showBoard(board, s, agent, 0);
+        Main.showBoard(board, s, agent, 0, 0);
     }
 }
 
