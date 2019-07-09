@@ -8,7 +8,7 @@ import chess1.Piece;
  * track of the best moves seen by each thread as they search
  *
  */
-class BestMove {
+public class BestMove {
     boolean endGameFound;
     Move move;
     int value;
