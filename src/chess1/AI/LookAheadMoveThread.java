@@ -13,12 +13,12 @@ import java.util.concurrent.Callable;
  *
  */
 public class LookAheadMoveThread implements Callable<BestMove> {
-    private boolean maximize;
-    private Minimax minimax;
-    private Board board;
-    private int depth;
-    private Move move;
-    private BestMove best;
+    private final boolean maximize;
+    private final Minimax minimax;
+    private final Board board;
+    private final int depth;
+    private final Move move;
+    private final BestMove best;
 
     LookAheadMoveThread(final Board board, final Minimax minimax, boolean maximize, final Move move, int depth) {
         this.best = new BestMove(maximize);
