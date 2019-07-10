@@ -25,14 +25,14 @@ import java.util.Map;
  *
  */
 public class Minimax extends AIMoveSelector {
-    private ExecutorService pool = Executors.newFixedThreadPool(threadPoolSize);
+    private final ExecutorService pool = Executors.newFixedThreadPool(threadPoolSize);
     private final BoardEvaluator evaluator = new PieceValuesPlusPos();
     private final Object processedLock = new Object();
     private Consumer<String> callback;
     private FutureTask[] threadStack;
     private Integer movesProcessed;
     private boolean maximize;
-    private long maxSeconds;
+    private final long maxSeconds;
     private int maxThreads;
     private int numThreads;
     private int startDepth;
@@ -120,7 +120,7 @@ public class Minimax extends AIMoveSelector {
      * AIMoveSelector interface using the minimax algorithm.
      *
      * @param board The board state to find the best move for the current player for
-     * @param
+     * @param returnImmediate launch the search in a background thread and return immediately
      * @return the best move for the current player or null if there are no moves.
      */
     @Override
@@ -172,9 +172,7 @@ public class Minimax extends AIMoveSelector {
             if (currentSearch != null) {
                 currentSearch.interrupt();
             }
-            currentSearch = new Thread(() -> {
-                finishCurrentSearch(board);
-            });
+            currentSearch = new Thread(() -> finishCurrentSearch(board));
             currentSearch.start();
             return best.move;
         }
