@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static java.lang.Math.abs;
 
@@ -22,7 +23,7 @@ public class Board {
     private List<Spot> blkKingAdjacent;
     private List<Spot> whtKingAdjacent;
 
-    boolean adjacentBonus = false;
+    private boolean adjacentBonus = false;
 
     /**
      * The default constructor for a Board object.
@@ -57,6 +58,8 @@ public class Board {
         turn = ref.turn;
         passes = ref.passes;
         lastMove = new Move(ref.lastMove);
+        maxAllowedRepetitions = ref.maxAllowedRepetitions;
+        adjacentBonus = ref.adjacentBonus;
         if (ref.currentPlayerMoves == null) {
             currentPlayerMoves = null;
         } else {
@@ -91,7 +94,7 @@ public class Board {
     /**
      * Standard Game
      */
-    void init() {
+    private void init() {
         initBoardArray();
         putPiece(Piece.Rook,   Side.Black, 0, 0);
         putPiece(Piece.Knight, Side.Black, 1, 0);
@@ -134,13 +137,12 @@ public class Board {
     public void initTest() {
         initBoardArray();
 
-        putPiece(Piece.King,  Side.Black, 4, 0);
-        putPiece(Piece.Pawn,  Side.Black, 2, 4);
-        getSpot(2, 4).setMoved(true);
 
-        putPiece(Piece.Pawn,  Side.White, 3, 6);
-        putPiece(Piece.King,  Side.White, 4, 7);
-//        getSpot(3, 6).setMoved(true);
+        putPiece(Piece.Knight,  Side.White, 1, 0);
+        putPiece(Piece.Knight,  Side.Black, 1, 7);
+        putPiece(Piece.Knight,  Side.White, 6, 0);
+        putPiece(Piece.Knight,  Side.Black, 6, 7);
+
 
         passes = 1;
         turn = Side.White;
@@ -149,7 +151,8 @@ public class Board {
         piecesTaken0 = new ArrayList<>();
         piecesTaken1 = new ArrayList<>();
         moveHistory = new ArrayList<>();
-        currentPlayerMoves = getMovesSorted(turn);
+        currentPlayerMoves = getMovesSorted(Side.White);
+        otherPlayerMoves = getMovesSorted(Side.Black);
     }
 
     /**
@@ -203,11 +206,7 @@ public class Board {
     }
 
     public final List<Move> getMoveHistory() {
-        List<Move> list = new ArrayList<>();
-        moveHistory.forEach(m -> {
-            list.add(new Move(m));
-        });
-        return list;
+        return moveHistory.stream().map(Move::new).collect(Collectors.toList());
     }
 
     public List<Spot> getBlkKingAdjacent() { return blkKingAdjacent; }
@@ -253,7 +252,7 @@ public class Board {
      * @param col The column of the spot to change
      * @param row The row of the spot to change
      */
-    void putPiece(final int type, final int side, final int col, final int row) {
+    private void putPiece(final int type, final int side, final int col, final int row) {
         board.set(row * 8 + col, new Spot(side, type, col, row));
     }
 
@@ -396,7 +395,7 @@ public class Board {
         moveHistory.add(move);
     }
 
-    List<Spot> getKingAdjacentSpots(int x, int y) {
+    private List<Spot> getKingAdjacentSpots(int x, int y) {
         if (isValidSpot(x, y) && getSpot(x, y).getType() != Piece.King) {
             // This isn't the king!  Impostor!
             return null;
@@ -576,7 +575,7 @@ public class Board {
                 // if moving 2 spots...
                 if (abs(fromRow - toRow) == 2) {
                     // not allowed if the pawn has already moved
-                    if (fromSpot.getMoved()) {
+                    if (fromSpot.hasMoved()) {
                         return;
                     }
                     // not allowed if a piece is in the way
@@ -591,15 +590,13 @@ public class Board {
                     return;
                 }
             } else {
-                // pawns cannot move diagonally unless capturing unless en-passant
+                // pawns cannot move diagonally unless capturing unless En passant
                 Move lastMove = getLastMove();
                 int forward = (getTurn() == Side.Black) ? 1 : -1;
                 if (toSpot.isEmpty() && lastMove.getToRow() == (toRow - forward) && lastMove.getToCol() == toCol) {
-                    if (fromCol != toCol) {
-                        value = Piece.values[Piece.Pawn];
-                    } else {
-                        return;
-                    }
+                    value = Piece.values[Piece.Pawn];
+                } else {
+                    return;
                 }
             }
         }
@@ -812,21 +809,21 @@ public class Board {
         addMoveIfValid(moves, col, row, col + 1, row);
 
         // check for king side castling:
-        if (!spot.getMoved()
+        if (!spot.hasMoved()
                 && getSpot(col + 1, row).isEmpty()
                 && getSpot(col + 2, row).isEmpty()
                 && getSpot(col + 3, row).getType() == Piece.Rook
-                && !getSpot(col + 3, row).getMoved()) {
+                && !getSpot(col + 3, row).hasMoved()) {
             addMoveIfValid(moves, col, row, col + 2, row);
         }
 
         // check for queen side castling:
-        if (!spot.getMoved()
+        if (!spot.hasMoved()
                 && getSpot(col - 1, row).isEmpty()
                 && getSpot(col - 2, row).isEmpty()
                 && getSpot(col - 3, row).isEmpty()
                 && getSpot(col - 4, row).getType() == Piece.Rook
-                && !getSpot(col - 4, row).getMoved()) {
+                && !getSpot(col - 4, row).hasMoved()) {
             addMoveIfValid(moves, col, row, col - 2, row);
         }
         return moves;
