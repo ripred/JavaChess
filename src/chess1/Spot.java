@@ -36,7 +36,7 @@ public class Spot {
     public int     getType()   {return type;}
     public int     getCol()    {return col;}
     public int     getRow()    {return row;}
-    public boolean getMoved()  {return moved;}
+    public boolean hasMoved()  {return moved;}
     public boolean isEmpty()   {return type == Piece.Empty;}  // spot is empty if true
 
     void setColor(int s)        { side = s; }
