@@ -5,12 +5,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
 
-import static main.Ansi.bg24b;
-import static main.Ansi.fg24b;
-
 public class ChessConfig {
-    private String configFilePath;
-    private Properties props;
+    private final String configFilePath;
+    private final Properties props;
 
     // General Game Settings:
     public int     maxDrawReps;         // number of repeated moves to call draw
