@@ -9,9 +9,9 @@ import chess1.Piece;
  *
  */
 public class BestMove {
-    boolean endGameFound;
-    Move move;
-    int value;
+    public boolean endGameFound;
+    public Move move;
+    public int value;
 
     BestMove(boolean maximize) {
         endGameFound = false;
