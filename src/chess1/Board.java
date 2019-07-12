@@ -22,8 +22,9 @@ public class Board {
     private int maxAllowedRepetitions;
     private List<Spot> blkKingAdjacent;
     private List<Spot> whtKingAdjacent;
-
     private boolean adjacentBonus = false;
+    private boolean blkKingInCheck;
+    private boolean whtKingInCheck;
 
     /**
      * The default constructor for a Board object.
@@ -129,6 +130,9 @@ public class Board {
             blkKingAdjacent = getKingAdjacentSpots(4, 0);
             whtKingAdjacent = getKingAdjacentSpots(4, 7);
         }
+
+        whtKingInCheck = kingInCheck(turn).size() > 0;
+        blkKingInCheck = kingInCheck((turn + 1) % 2).size() > 0;
     }
 
     /**
@@ -185,6 +189,10 @@ public class Board {
         return new Move(lastMove);
     }
 
+    public boolean getKingInCheck(int side) {
+        return (side == Side.Black) ?  blkKingInCheck : whtKingInCheck;
+    }
+
     public int getMaxAllowedRepetitions() {
         return maxAllowedRepetitions;
     }
@@ -212,6 +220,7 @@ public class Board {
     public List<Spot> getBlkKingAdjacent() { return blkKingAdjacent; }
     public List<Spot> getWhtKingAdjacent() { return whtKingAdjacent; }
 
+
     public boolean checkDrawByRepetition() {
         // Check for draw-by-repetition (same made too many times in a row by a player)
         List<Move> history = getMoveHistory();
@@ -235,14 +244,24 @@ public class Board {
      *
      */
     public void advanceTurn() {
+        advanceTurn(true);
+    }
+    public void advanceTurn(boolean generateNewMoves) {
         passes++;
         int otherSide = turn;
-        turn = (turn == Side.White) ? Side.Black : Side.White;
+        turn = (turn + 1) % 2;
 
-        currentPlayerMoves = getMovesSorted(turn);
-        otherPlayerMoves = getMovesSorted(otherSide);
+        if (generateNewMoves) {
+            updateMoves();
+        }
     }
 
+    public void updateMoves() {
+        currentPlayerMoves = getMovesSorted(turn);
+        otherPlayerMoves = getMovesSorted((turn + 1) % 2);
+        whtKingInCheck = kingInCheck(turn).size() > 0;
+        blkKingInCheck = kingInCheck((turn + 1) % 2).size() > 0;
+    }
 
     /**
      * Set all of the attributes of a spot on the board.
@@ -502,7 +521,7 @@ public class Board {
         for (Move m:moves) {
             Board current = new Board(this);
             current.executeMove(m);
-            if (kingInCheck(current, side).size() == 0) {
+            if (current.kingInCheck(side).size() == 0) {
                 valid.add(m);
             }
         }
@@ -512,16 +531,15 @@ public class Board {
     /**
      * Checks the board state to see if the specified side is in check
      *
-     * @param board The board to check
      * @param side The side to examine to see if it is in check
      * @return true if the current player is in check otherwise false.
      */
-    public List<Move> kingInCheck(final Board board, final int side) {
+    private List<Move> kingInCheck(final int side) {
         List<Move> kingCheckMoves = new ArrayList<>();
-        int otherSide = (side == Side.White) ? Side.Black : Side.White;
-        List<Move> opponentMoves = board.getMoves(otherSide, false);
+        int otherSide = (side + 1) % 2;
+        List<Move> opponentMoves = getMoves(otherSide, false);
 
-        for (Spot s : board.getBoard()) {
+        for (Spot s : getBoard()) {
             if (s.getType() != Piece.King || s.getSide() != side) continue;
 
             for (Move m : opponentMoves) {

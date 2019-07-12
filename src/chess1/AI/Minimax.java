@@ -266,7 +266,7 @@ public class Minimax extends AIMoveSelector {
         //     to see if it can get promoted before we move this king
 
         // Only do this if we are not in check:
-        if (board.kingInCheck(board, board.getTurn()).size() == 0) {
+        if (!board.getKingInCheck(board.getTurn())) {
             if (bestSpot.getType() == Piece.King) {
                 // See if all we have left are pawn and king moves
                 if (ourMoveMap.get(Piece.Pawn).size() > 0 &&
@@ -279,8 +279,8 @@ public class Minimax extends AIMoveSelector {
 
         // See if our opponent only has their king left and get more aggressive if so:
 
-        if (board.kingInCheck(board, board.getTurn()).size() == 0) {
-            List<Move> theirMoveList = board.getMovesSorted(board.getTurn() == Side.White ? Side.Black : Side.White);
+        if (!board.getKingInCheck(board.getTurn())) {
+            List<Move> theirMoveList = board.getMovesSorted((board.getTurn() + 1) % 2);
             Map<Integer, List<Move>> theirMoveMap = mapMovesByType(board, theirMoveList);
 
             // If all they have left is their king..
