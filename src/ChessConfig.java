@@ -95,8 +95,8 @@ public class ChessConfig {
         blkCheck = props.getProperty("blkCheck", "192, 128, 0");
         whtCheck = props.getProperty("whtCheck", "192, 128, 0");
 
-        targetsShade = props.getProperty("targetsShade", "0, 0, 64");
-        victimsShade = props.getProperty("victimsShade", "64, 0, 0");
+        targetsShade = props.getProperty("targetsShade", "0, 0, 128");
+        victimsShade = props.getProperty("victimsShade", "128, 0, 0");
 
         return fileMissing;
     }
