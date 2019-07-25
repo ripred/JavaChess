@@ -333,7 +333,7 @@ public class EngineTuningTests {
 
         Move move = agent.bestMove(board, true);
         while (move == null) {
-            Main.showBoard(board, fen, agent, moveStart, 0);
+            Main.showBoard(board, fen, agent, moveStart, 0, true);
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {

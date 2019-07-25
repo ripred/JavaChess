@@ -9,20 +9,20 @@ public class LiteUtil {
     final private static int[] values = {0, 10000, 30000, 30000, 50000, 90000, MAX_VALUE};
 
     // Masks
-    final public static byte Type   = (byte) 0b00000111;
-    final public static byte Unused = (byte) 0b10001000;
-    final public static byte Side   = (byte) 0b00010000;
-    final public static byte Moved  = (byte) 0b00100000;
-    final public static byte Check  = (byte) 0b01000000;
+    final public static byte Type   = (byte) 0x07;
+    final public static byte Unused = (byte) 0x88;
+    final public static byte Side   = (byte) 0x10;
+    final public static byte Moved  = (byte) 0x20;
+    final public static byte Check  = (byte) 0x40;
 
-    final private static byte  Empty   = (byte) 0b00000000;
-    final private static byte  Pawn    = (byte) 0b00000001;
-    final private static byte  Knight  = (byte) 0b00000010;
-    final private static byte  Bishop  = (byte) 0b00000011;
-    final private static byte  Rook    = (byte) 0b00000100;
-    final private static byte  Queen   = (byte) 0b00000101;
-    final private static byte  King    = (byte) 0b00000110;
-    final private static byte  Marker  = (byte) 0b00000111;
+    final private static byte  Empty   = (byte) 0;
+    final private static byte  Pawn    = (byte) 1;
+    final private static byte  Knight  = (byte) 2;
+    final private static byte  Bishop  = (byte) 3;
+    final private static byte  Rook    = (byte) 4;
+    final private static byte  Queen   = (byte) 5;
+    final private static byte  King    = (byte) 6;
+    final private static byte  Marker  = (byte) 7;
 
     public static byte newSpot(int type, int side, boolean moved, boolean inCheck) {
         byte b = 0;
@@ -35,7 +35,7 @@ public class LiteUtil {
 
 
     public static boolean isEmpty(int b) {
-        return getType(b) == LiteUtil.Empty;
+        return getType(b) == Empty;
     }
 
     public static int getValue(int b) {
@@ -47,7 +47,7 @@ public class LiteUtil {
     }
 
     public static byte getSide(int b) {
-        return (byte) ((Side & b) >> 4);
+        return (byte) ((Side & b) >>> 4);
     }
 
     public static boolean hasMoved(int b) {

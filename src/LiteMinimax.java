@@ -8,18 +8,21 @@ import java.io.Serializable;
 import java.io.IOException;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 
 /**
@@ -32,8 +35,9 @@ public class LiteMinimax implements Serializable {
     private static final long serialVersionUID = 7249069248361182397L;
 
     private final ExecutorService pool = Executors.newFixedThreadPool(100);
+    private final ExecutorService executorForMainSearch = Executors.newSingleThreadExecutor();
     private final Object processedLock = new Object();
-    private volatile Thread currentSearch;
+    private volatile Future<Move> currentSearch;
     private double acceptableRiskLevel;
     private Consumer<String> callback;
     private FutureTask[] threadStack;
@@ -66,41 +70,44 @@ public class LiteMinimax implements Serializable {
      *                   the best move found so far.
      */
     public LiteMinimax(String filename, int depth, int maxSeconds) {
+        this.acceptableRiskLevel = Main.riskLevel;
         this.best = new BestMove(false);
         this.cachedMoves = new CachedMoveMap();
+        this.gameTime = System.nanoTime();
+        this.acceptableRiskLevel = 0.25f;
         this.serDeserFilename = filename;
         this.maxSeconds = maxSeconds;
         this.currentSearch = null;
         this.startDepth = depth;
         this.movesProcessed = 0L;
-        this.acceptableRiskLevel = 0.25f;
         this.threadStack = null;
         this.maximize = false;
         this.callback = null;
         this.maxThreads = 0;
         this.numThreads = 0;
-
-        this.gameTime = System.nanoTime();
-
-        if (Main.options.containsKey("conf")) {
-            this.acceptableRiskLevel = Double.valueOf(Main.options.get("conf")) / 100.0f;
-        }
     }
 
 
     /**
      * See if a previous search launched in the background has completed or not
      *
-     * @return true of the last background search initiated has completed
+     * @return true if the last background search initiated has completed
      */
     public boolean moveSearchIsDone() {
         if (currentSearch == null) return true;
-        if (currentSearch.isAlive()) {
+        if (!currentSearch.isDone()) {
             return false;
         } else {
+            Move move = null;
             try {
-                currentSearch.join();
+                move = currentSearch.get();
+                assert move != null : "null return value from master search thread for Move";
+                best.move = move;
+                best.value = move.getValue();
+                currentSearch = null;
             } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
                 e.printStackTrace();
             } finally {
                 currentSearch = null;
@@ -199,26 +206,25 @@ public class LiteMinimax implements Serializable {
         throttle = nanos;
     }
 
+    private int fileNum = 1;
     public void saveMoveMap(String filename) throws IOException {
-
 
         Main.logWriter.close();
         Main.logWriter = null;
 
-        Main.logFile = "chess" + (Main.fileNum++) + ".log";
+        Main.logFile = "chess" + (fileNum++) + ".log";
         Main.log("Saving moves to disk..");
-        log();
+        log(null);
         Main.log("");
         Main.logWriter.close();
         Main.logWriter = null;
-
 
         int outerSize = cachedMoves.size();
         int outerCount = 0;
         int innerCount = 0;
         int innerSize = 0;
 
-        ConcurrentMap<String, ConcurrentMap<Boolean, BestMove>> temp = new ConcurrentHashMap<>(outerSize, 0.1f, 1);
+        CachedMoveMap temp = new CachedMoveMap();
         for (String key : cachedMoves.keySet()) {
             if (!temp.containsKey(key)) {
 
@@ -250,7 +256,6 @@ public class LiteMinimax implements Serializable {
         }
         System.out.print('\r' + Ansi.clearEOL);
         System.out.print("\rSerializing to disk.." + Ansi.clearEOL);
-
 
         ObjectOutputStream objectOutputStream = null;
         try {
@@ -295,7 +300,7 @@ public class LiteMinimax implements Serializable {
     }
 
 
-    public void log() {
+    public void log(LiteBoard board) {
         gameDuration = (System.nanoTime() - gameTime) / 1_000_000_000L;
         int hours = 0;
         int minutes = 0;
@@ -315,28 +320,31 @@ public class LiteMinimax implements Serializable {
 
         Main.setLogLevel(Main.LogLevel.DEBUG);
 
-        Main.log("Minimax Statistics = ");
-        Main.log("");
-        Main.log("Ply Depth for game: %d", Main.maxDepth);
-        Main.log("Game Duration: %02d:%02d:%02d", hours, minutes, seconds);
-        Main.log("");
-        Main.log("Total Boards stored in Cache:      %,14d", cachedMoves.size());
-        Main.log("Max Boards stored in Cache:        %,14d", cachedMoves.maxMovesCached);
-        Main.log("Total Moves in Cache:              %,14d", totalCaches);
-        Main.log("");
-        Main.log("Number Cached Moves Offered:       %,14d", cachedMoves.numMovesOffered);
-        Main.log("Number Cached Moves Added:         %,14d", cachedMoves.numMovesCached);
-        Main.log("Number of times Replaced Existing: %,14d", cachedMoves.numMovesUpdated);
-        Main.log("");
-        Main.log("Number of Total Cache Checks:      %,14d", totalMapChecks);
-        Main.log("Number of Cache hits:              %,14d", cachedMoves.numCacheHits);
-        Main.log("Number Cache misses:               %,14d", cachedMoves.numCacheMisses);
-        Main.log("Number of Saved Move examinations: %,14d", cachedMoves.numExaminationsSaved);
-        Main.log("");
-        Main.log("Number time Ran Anyway:            %,14d", cachedMoves.numMovesTested);
-        Main.log("Number Ran Anyway Better:          %,14d", cachedMoves.numMovesImproved);
-        Main.log("");
-        Main.log("Minimax Statistics = ");
+        List<String> logLines = Arrays.asList(
+                "Minimax Statistics = ",
+                "",
+                String.format("Ply Depth for game: %d", Main.maxDepth),
+                String.format("Game Duration: %02d:%02d:%02d", hours, minutes, seconds),
+                (board == null) ? "" : String.format("Turn: %d", board.turns),
+                "",
+                String.format("Total Boards stored in Cache:      %,14d", cachedMoves.size()),
+                String.format("Max Boards stored in Cache:        %,14d", cachedMoves.maxMovesCached),
+                String.format("Total Moves in Cache:              %,14d", totalCaches),
+                "",
+                String.format("Number Cached Moves Offered:       %,14d", cachedMoves.numMovesOffered),
+                String.format("Number Cached Moves Added:         %,14d", cachedMoves.numMovesCached),
+                String.format("Number of times Replaced Existing: %,14d", cachedMoves.numMovesUpdated),
+                "",
+                String.format("Number of Total Cache Checks:      %,14d", totalMapChecks),
+                String.format("Number of Cache hits:              %,14d", cachedMoves.numCacheHits),
+                String.format("Number Cache misses:               %,14d", cachedMoves.numCacheMisses),
+                String.format("Number of Saved Move examinations: %,14d", cachedMoves.numExaminationsSaved),
+                "",
+                String.format("Number time Ran Anyway:            %,14d", cachedMoves.numMovesTested),
+                String.format("Number Ran Anyway Better:          %,14d", cachedMoves.numMovesImproved),
+                "",
+                "Minimax Statistics = ");
+        Main.log(Main.LogLevel.DEBUG, logLines);
     }
 
 
@@ -419,7 +427,7 @@ public class LiteMinimax implements Serializable {
 
         // Cancel any existing master search thread (and its threads) and create a new
         // thread array to keep this new search in:
-        cancelSearchAndWait();
+        cancelThreadStack();
 
         // Clear the best move we have for this search and set the time limit for them to finish.
         // If maxSeconds == 0 then the threads ignore the time limit and run to completion.
@@ -434,9 +442,7 @@ public class LiteMinimax implements Serializable {
         // thread into its own background thread and return immediately.
 
         if (returnImmediate) {
-            currentSearch = new Thread(() -> finishCurrentSearch(board, pieceMap));
-            currentSearch.setName("Background search owner thread");
-            currentSearch.start();
+            currentSearch = executorForMainSearch.submit(() -> finishCurrentSearch(board, pieceMap));
             return best.move;
         } else {
             // Otherwise wait here for the search to complete and return the move it suggests:
@@ -527,24 +533,8 @@ public class LiteMinimax implements Serializable {
             // See if the results of this thread's search are a better move than
             // we have so far and keep it if so:
             //
-            if (maximize && threadResult.value >= best.value) {
+            if ((maximize && threadResult.value >= best.value) || (!maximize && threadResult.value <= best.value)) {
                 best = threadResult;
-            } else if (!maximize && threadResult.value <= best.value) {
-                best = threadResult;
-            }
-
-            // See if the move is a 'game ending move' (i.e. killer best move to make next)
-            if (threadResult.endGameFound) {
-                best = threadResult;
-
-                // cancel the other search threads since they can't do any better
-                // than a game-winning move.  Note that we stay in this loop
-                // gathering/cleaning up any other outstanding threads
-                maxSeconds = 1L;
-                searchTimeLimit = System.nanoTime();
-
-                // return to get the results of the next completed thread
-                continue;
             }
 
             // play nice with the other processes on this cpu
@@ -555,14 +545,11 @@ public class LiteMinimax implements Serializable {
             }
 
             // Check for specific corner cases when we might want to make
-            // specific kinds of moves
-            //
+            // specific kinds of moves for
             Move check = checkEndGameCornerCases(board, pieceMap, best.move);
             if (check != null) {
-//                if ((maximize && check.getValue() >= best.value) || (!maximize && getBestMove().getValue() <= best.value)) {
                 best.move = check;
                 best.move.setValue(best.value);
-//                }
             }
 
             if (best.move != null) {
@@ -589,11 +576,6 @@ public class LiteMinimax implements Serializable {
         }
 
         // Return the best move found for this board setup:
-
-//        currentSearch = null;
-//        threadStack = null;
-//        numThreads = 0;
-
         return best.move;
     }
 
@@ -883,19 +865,20 @@ public class LiteMinimax implements Serializable {
             int pieceType = LiteUtil.getType(b);
 
             if (pieceType == LiteBoard.Empty) {
-                Main.log(Main.LogLevel.ERROR, "");
-                Main.log(Main.LogLevel.ERROR,
-                        "Yet another attempt to map a move that seems to point to an empty spot:");
-                Main.log(Main.LogLevel.ERROR, "fi = %d:", fi);
-                Main.log(Main.LogLevel.ERROR, "b = %d:", b);
-                Main.log(Main.LogLevel.ERROR, "pieceType = %d:", pieceType);
-                Main.log(Main.LogLevel.ERROR, "board.board[fi] = %d:", board.board[fi]);
-                Main.log(Main.LogLevel.ERROR, "");
+                List<String> logLines = new ArrayList<>(Arrays.asList(
+                        "",
+                        "Yet another attempt to map a move that seems to point to an empty spot:",
+                        String.format("fi = %d:", fi),
+                        String.format("b = %d:", b),
+                        String.format("pieceType = %d:", pieceType),
+                        String.format("board.board[fi] = %d:", board.board[fi]),
+                        ""));
                 StackTraceElement[] stack = Thread.currentThread().getStackTrace();
                 for (StackTraceElement s : stack) {
-                    Main.log(Main.LogLevel.ERROR, s.toString());
+                    logLines.add(s.toString());
                 }
-                Main.log(Main.LogLevel.ERROR, "");
+                logLines.add("");
+                Main.log(Main.LogLevel.ERROR, logLines);
 
                 continue;
             }
@@ -1070,20 +1053,33 @@ public class LiteMinimax implements Serializable {
     public void close() throws IOException {
         // Disable new tasks from being submitted
         pool.shutdown();
+        executorForMainSearch.shutdown();
 
         try {
             // Wait a while for existing tasks to terminate
-            if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+            if (!pool.awaitTermination(5, TimeUnit.SECONDS)) {
                 // Cancel currently executing tasks
                 pool.shutdownNow();
 
                 // Wait a while for tasks to respond to being cancelled
-                if (!pool.awaitTermination(60, TimeUnit.SECONDS))
+                if (!pool.awaitTermination(5, TimeUnit.SECONDS))
+                    System.err.println("some look-ahead threads did not terminate");
+            }
+
+            // same for the other executor:
+            // Wait a while for existing tasks to terminate
+            if (!executorForMainSearch.awaitTermination(5, TimeUnit.SECONDS)) {
+                // Cancel currently executing tasks
+                executorForMainSearch.shutdownNow();
+
+                // Wait a while for tasks to respond to being cancelled
+                if (!executorForMainSearch.awaitTermination(5, TimeUnit.SECONDS))
                     System.err.println("some look-ahead threads did not terminate");
             }
         } catch (InterruptedException ie) {
             // (Re-)Cancel if current thread also interrupted
             pool.shutdownNow();
+            executorForMainSearch.shutdown();
 
             // Preserve interrupt status
 //          Thread.currentThread().interrupt();

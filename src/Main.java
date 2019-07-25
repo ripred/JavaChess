@@ -5,20 +5,30 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
+import javax.swing.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class Main {
+
+    static BiPredicate<List<String>, Map<String, String>> containsAny = (strList, optMap) -> {
+        for (String key : strList) {
+            if (optMap.containsKey(key)) return true;
+        }
+        return false;
+    };
 
     public static LiteBoard liteBoard = null;
     public static Map<String, String> options = null;
@@ -30,9 +40,10 @@ public class Main {
     private static String configFile = "chess.properties";
     public static String logFile = "chess.log";
     public static BufferedWriter logWriter = null;
-    static LogLevel logLevel = LogLevel.INFO;
+    static LogLevel logLevel = LogLevel.DEBUG;
     public static int maxDepth = 2;
     public static int maxSeconds = 0;
+    public static double riskLevel = 0.25;
 
     public enum LogLevel {
         DEBUG (0, "DEBUG"),
@@ -51,6 +62,14 @@ public class Main {
 
     public static void setLogLevel(LogLevel level) {
         logLevel = level;
+    }
+
+    public static void log(List<String> logLines) {
+        logLines.forEach((line) -> log(line));
+    }
+
+    public static void log(LogLevel level, List<String> logLines) {
+        logLines.forEach((line) -> log(level, line));
     }
 
     public static void log(String format, Object... args) {
@@ -81,6 +100,17 @@ public class Main {
             if (logWriter == null) return;
         }
 
+        String output = createLogEntry(level, format, args);
+
+        try {
+            logWriter.write(output);
+            logWriter.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String createLogEntry(LogLevel level, String format, Object... args) {
         String formatDateTime;
         {
             LocalDateTime now = LocalDateTime.now();
@@ -96,13 +126,7 @@ public class Main {
             String formattedStr = String.format(format, args);
             output = String.format("%20s %5s - %s", formatDateTime, level.name, formattedStr);
         }
-
-        try {
-            logWriter.write(output);
-            logWriter.newLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        return output;
     }
 
     private static void writeStatsFile() {
@@ -136,10 +160,14 @@ public class Main {
         }
     }
 
-    private static void usage() {
+    private static void outputUsage() {
         System.out.println("chess [-option]");
         System.out.println("    -configfile=file            Sets the name of the properties file to load and use");
-        System.out.println("    -conf=num                   Sets the max allowed 'untested tries' pct on chosen moves num: 0-100.");
+        System.out.println("    -risk=num                   Risk level.  Sets the percentage of times a move has\n" +
+                           "                                to be fully examined by the AI divided by the number of\n" +
+                           "                                times the extra evaluation found a better move. As the\n" +
+                           "                                move is run more times and continues to be the best move\n" +
+                           "                                this percentage goes down. num: 0-100.  Default: 25");
         System.out.println("                                Higher value mean less tested moves will be accepted.");
         System.out.println("    -log                        Activity and debug info will be written to chess.log");
         System.out.println("    -log=file                   Activity and debug info will be written to specified log file");
@@ -151,7 +179,7 @@ public class Main {
         System.out.println("    -test                       Run internal tests and exit");
         System.out.println("    -ply=num                    Sets the max number of look-ahead moves");
         System.out.println("    -maxtime=num                Limit AI thinking to num seconds");
-//        System.out.println("    -conf=num                   ");
+//        System.out.println("    -key=value                  ");
     }
 
     private static void onAppExit() {
@@ -173,7 +201,7 @@ public class Main {
         }
 
         if (options.containsKey("log")) {
-            liteAgent.log();
+            liteAgent.log(null);
         }
 
         if (logWriter != null) {
@@ -186,7 +214,21 @@ public class Main {
             logWriter = null;
         }
 
+        if (liteAgent != null) {
+            try {
+                liteAgent.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Turn the cursor back on
+        System.out.println(Ansi.cursOn);
+
         System.out.println("Goodbye \uD83D\uDE0E");
+
+        // Turn the cursor back on
+        System.out.println(Ansi.cursOn);
     }
 
 
@@ -196,9 +238,13 @@ public class Main {
 
         parseCmdline(args);
 
-        if (options.containsKey("?") || options.containsKey("help") || options.containsKey("h")) {
-            usage();
+        if (containsAny.test(Arrays.asList("?", "help", "h"), options)) {
+            outputUsage();
             System.exit(0);
+        }
+
+        if (options.containsKey("risk")) {
+            riskLevel = Double.parseDouble(options.get("risk")) / 100.0f;
         }
 
         if (options.containsKey("configfile")) {
@@ -212,11 +258,11 @@ public class Main {
         maxSeconds = config.maxSeconds;
 
         if (options.containsKey("ply")) {
-            maxDepth = Integer.valueOf(options.get("ply"));
+            maxDepth = Integer.parseInt(options.get("ply"));
         }
 
         if (options.containsKey("maxtime")) {
-            maxSeconds = Integer.valueOf(options.get("maxtime"));
+            maxSeconds = Integer.parseInt(options.get("maxtime"));
         }
 
         liteAgent = new LiteMinimax(serialFilename, maxDepth, maxSeconds);
@@ -249,11 +295,11 @@ public class Main {
         }
 
         if (options.containsKey("profwait")) {
-            Thread.sleep(Integer.valueOf(options.get("profwait")) * 1000);
+            Thread.sleep(Integer.parseInt(options.get("profwait")) * 1000);
         }
 
         if (options.containsKey("throttle")) {
-            liteAgent.setThrottle(Integer.valueOf(options.get("throttle")));
+            liteAgent.setThrottle(Integer.parseInt(options.get("throttle")));
         }
 
         playGame(liteAgent);
@@ -261,8 +307,6 @@ public class Main {
         onAppExit();
     }
 
-
-    public static int fileNum = 0;
 
     private static void playGame(final LiteMinimax liteAgent) throws InterruptedException {
         for (int n = 0; n < 20; ++n) {
@@ -274,24 +318,23 @@ public class Main {
         long moveStart;
         Move move;
 
-//        board.initTest();
-
         liteAgent.registerDisplayCallback(s ->
-            showBoard(liteBoard, s, liteAgent, 0, gameStart)
+            showBoard(liteBoard, s, liteAgent, 0, gameStart, true)
         );
 
         System.out.println();
-        showBoard(liteBoard, null, liteAgent, 0, 0);
+        showBoard(liteBoard, null, liteAgent, 0, 0, true);
 
         moveStart = System.nanoTime();
         move = getNextPlayersMove(liteBoard, liteAgent, null, moveStart, gameStart);
 
-        fileNum = 1;
+        int turn = liteBoard.turn;
+        int turns = liteBoard.turns;
 
         while (move != null) {
             moveDesc = getMoveDesc(liteBoard, move);
 
-            int ndx = move.getToCol() + move.getToRow() * 8;
+            int ndx = move.getTo();
             if (!liteBoard.isEmpty(ndx)) {
                 // a piece is being taken.
                 // throw away move maps that had it:
@@ -301,18 +344,38 @@ public class Main {
             liteBoard.executeMove(move);
             liteBoard.advanceTurn();
 
-            if ((liteBoard.turns % 1) == 0) {
-                    liteAgent.log();
-            }
+            assert liteBoard.turn != turn : "The '.turn' instance variable on the LiteBoard did not move to the other" +
+                    " player";
+
+            assert liteBoard.turns == (turns + 1) : "Somehow some turns were advanced on the board unexpectedly";
+
+            assert (liteBoard.turns % 2) ==liteBoard.turn : "The 'turn' and 'turns' values are out of sync";
+
+            turn = liteBoard.turn;
+            turns = liteBoard.turns;
 
             System.out.println();
-            showBoard(liteBoard, moveDesc, liteAgent, moveStart, gameStart);
+            showBoard(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true);
+
+            assert (liteBoard.lastMove != null);
+            int lastMoveToIndex = liteBoard.lastMove.getTo();
+            assert liteBoard.getType(lastMoveToIndex) != LiteBoard.Empty : "The last move did not seem to take " +
+                    "effect on the board";
+
+            assert liteBoard.numPieces1 > 0 : "Current player has no pieces?";
+
+// WTF? FixMe!
+//            assert liteBoard.getSide(liteBoard.lastMove.getTo()) != LiteUtil.getSide(liteBoard.pieces1[0]) : "Last " +
+//                    "move seems to " +
+//                    "show it's for the wrong side";
+
+            liteAgent.log(liteBoard);
 
             moveStart = System.nanoTime();
             move = getNextPlayersMove(liteBoard, liteAgent, moveDesc, moveStart, gameStart);
         }
 
-        String boardFinal = showBoardImpl(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true);
+        String boardFinal = showBoardImpl(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true, true);
 
         writeToScreenfile(boardFinal
                 + getGameSummary(liteBoard)
@@ -335,7 +398,7 @@ public class Main {
             log(LogLevel.ERROR, "* Somehow we allowed a move that put the king in check! *");
             showBoard(board,
                     "* Somehow we allowed a move that put the king in check! *",
-                    liteAgent, moveStart, gameStart);
+                    liteAgent, moveStart, gameStart, true);
             StackTraceElement[] stack = Thread.currentThread().getStackTrace();
             for (StackTraceElement s : stack) {
 //                System.out.print(s.toString());
@@ -347,7 +410,7 @@ public class Main {
         Move move = liteAgent.bestMove(board, true);
 
         while (move == null) {
-            showBoard(board, moveDesc, liteAgent, moveStart, gameStart);
+            showBoard(board, moveDesc, liteAgent, moveStart, gameStart, false);
 
             if (options.containsKey("statsfile")) {
                 writeStatsFile();
@@ -355,7 +418,7 @@ public class Main {
 
             int refreshRate = 1000;
             if (options.containsKey("refresh"))
-                refreshRate = Integer.valueOf(options.get("refresh"));
+                refreshRate = Integer.parseInt(options.get("refresh"));
             Thread.sleep(refreshRate);
 
             // make sure the board state hasn't changed to completed
@@ -365,7 +428,29 @@ public class Main {
                 return null;
             }
 
-            if (liteAgent.moveSearchIsDone()) {
+
+            long delayTime = System.nanoTime() + 1_500_000_000L;
+            // !!! *** The single point where we join() with the existing search thread if it is finished *** !!!
+            boolean lastSearchCompleted = false;
+            boolean searchCompleted = liteAgent.moveSearchIsDone();
+            if (searchCompleted && !lastSearchCompleted) {
+                // we just transitioned to the completed search. Delay a small amount
+                // to allow the threads in the background to complete and be joined
+                // with the controlling thread pool
+                lastSearchCompleted = searchCompleted;
+
+                showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
+
+                // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
+                // and then suddenly fly through 8 moves that get decided quickly by the AI
+                while (System.nanoTime() < delayTime) {
+                    Thread.yield();
+                }
+            }
+
+            showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
+
+            if (searchCompleted) {
                 move = liteAgent.getBestMove();
                 if (move == null) {
                     // it's still null even after saying the search is complete, so this is the end of the game
@@ -395,24 +480,37 @@ public class Main {
 
     // output proxy for app for use with a LiteBoard and a LiteMinimax agent
     public static void showBoard(final LiteBoard board, final String moveDesc, final LiteMinimax agent, long moveStart,
-                          long gameStart) {
+                          long gameStart, boolean searchDone) {
         // get the output formatted for this screen
-        String output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, false);
+        String output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, false, searchDone);
         System.out.print(output);
 
         // get the output formatted for storing in a file
         if (options.containsKey("screenfile")) {
-            output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, true);
+            output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, true, searchDone);
             writeToScreenfile(output);
         }
     }
 
     // output implementation for use with a LiteBoard and a LiteMinimax agent
-    static Map<Integer, Integer> lastProcessed = null;
+//    static int lastMoveSideLastTime = Side.Black;
+//    static int turns = 1;
+
     private static String showBoardImpl(final LiteBoard board, final String moveDesc, final LiteMinimax agent,
-                                   long moveStart, long gameStart, boolean forFile) {
+                                   long moveStart, long gameStart, boolean forFile, boolean searchDone) {
+
         // The screen row to begin displaying on
         int topRow = 1;
+
+//        if (turns != board.turns) {
+//            // we've advanced to the next move
+//            assert board.turns == (turns + 1) : "total number of turns in the board isn't right";
+//            if (board.getSide(board.lastMove.getTo()) == board.turn) {
+//                assert false : "The side of the last move is not the right color";
+//            }
+//            turns = board.turns;
+//            lastMoveSideLastTime = board.getSide(board.lastMove.getTo());
+//        }
 
         StringWriter writer = new StringWriter();
 
@@ -489,7 +587,6 @@ public class Main {
         }
         String takenMsg0 = sb.toString();
 
-//        LiteBoard liteBoard = new LiteBoard(board);
         int value = agent.evaluate(board);
         int score = Math.abs(value);
 
@@ -540,23 +637,29 @@ public class Main {
 
         if (moveDesc != null) {
             writer.write(moveDesc);
+            if (!moveDesc.contains("\n")) {
+                writer.write("\n");
+            }
+            if (!forFile) {
+                writer.write(Ansi.clearEOL);
+            }
+        } else {
+            writer.write("\n");
             if (!forFile) {
                 writer.write(Ansi.clearEOL);
             }
         }
-        writer.write("\n");
+//        writer.write("\n");
 
 
-        if (board.kingInCheck(board.turn)) {
-            writer.write((side == Side.Black) ? config.player2 : config.player1);
-            writer.write(" is in check");
-        }
+//        if (board.kingInCheck(board.turn)) {
+//            writer.write((side == Side.Black) ? config.player2 : config.player1);
+//            writer.write(" is in check");
+//        }
         if (!forFile) {
             writer.write(Ansi.clearEOL);
         }
         writer.write("\n");
-
-        Move lastMove = board.lastMove;
 
         // The color used to highlight the best move
         String bestFromBack = Ansi.bg24b(0, 160, 160);
@@ -566,7 +669,8 @@ public class Main {
         int bestFromRow = 8;
         int bestToCol = 8;
         int bestToRow = 8;
-        if (!agent.moveSearchIsDone()) {
+
+        if (!searchDone) {
             Move best = agent.getBestMove();
             if (best != null) {
                 bestFromCol = best.getFromCol();
@@ -602,7 +706,7 @@ public class Main {
                     fmtAttr = Ansi.boldAttr;
                 }
 
-                if (lastMove.getToCol() == col && lastMove.getToRow() == row) {
+                if (board.lastMove.getToCol() == col && board.lastMove.getToRow() == row) {
                     fmtClrFore = blkPiece ? blkMoved : whtMoved;
                 }
 
@@ -799,21 +903,25 @@ public class Main {
     }
 
     private static String getMoveDesc(final LiteBoard board, final Move move) {
+        return getMoveDesc(board, move, false);
+    }
+
+    private static String getMoveDesc(final LiteBoard board, final Move move, boolean forFile) {
         if (move == null) return "";
 
         StringBuilder sb = new StringBuilder();
 
-        int from = board.board[move.getFromCol() + move.getFromRow() * 8];
-        int to = board.board[move.getToCol() + move.getToRow() * 8];
+        int from = board.board[move.getFrom()];
+        int to = board.board[move.getTo()];
         int fromType = LiteUtil.getType(from);
         String pieceName = getPieceName(fromType);
         String suffix = LiteUtil.isEmpty(to) ? "" : " capturing "
                 + getPieceName(LiteUtil.getType(to));
         if (fromType == LiteBoard.Pawn) {
-            if ((board.turn == Side.Black && move.getToRow() == 7)
-                    || (board.turn == Side.White && move.getToRow() == 0)) {
-                if (!suffix.isEmpty()) suffix += " and ";
-                suffix += " is promoted to queen! ";
+            if ((board.turn == Side.Black && move.getToRow() == 7) ||
+                    (board.turn == Side.White && move.getToRow() == 0)) {
+                    if (!suffix.isEmpty()) suffix += " and ";
+                    suffix += " is promoted to queen! ";
             }
             if (LiteUtil.isEmpty(to) && move.getFromCol() != move.getToCol()) {
                 suffix = " En passant capturing Pawn!";
@@ -829,12 +937,16 @@ public class Main {
                     .append(" to ").append(posString(move.getToCol(), move.getToRow()))
                     .append(suffix);
         }
+        if (!forFile) {
+            sb.append(Ansi.clearEOL);
+        }
+        sb.append("\n");
 
-        LiteBoard board1 = new LiteBoard(board);
-        board1.executeMove(move);
-
-        if (board1.kingInCheck(board1.turn)) {
-            sb.append((board1.turn == Side.Black) ? config.player1 : config.player2).append(" is in check! ");
+        if (board.kingInCheck(board.turn)) {
+            sb.append((board.turn == Side.Black) ? config.player2 : config.player1).append(" is in check! ");
+            if (!forFile) {
+                sb.append(Ansi.clearEOL);
+            }
         }
         return sb.toString();
     }
@@ -893,8 +1005,8 @@ public class Main {
 
             int col1 = parts[0].charAt(0) - 'a';
             int col2 = parts[1].charAt(0) - 'a';
-            int row1 = 8 - Integer.valueOf(parts[0].substring(1));
-            int row2 = 8 - Integer.valueOf(parts[1].substring(1));
+            int row1 = 8 - Integer.parseInt(parts[0].substring(1));
+            int row2 = 8 - Integer.parseInt(parts[1].substring(1));
 
             for (int ndx=0; ndx < board.numMoves1; ndx++) {
                 Move m = board.moves1[ndx];

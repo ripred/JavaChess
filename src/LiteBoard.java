@@ -55,7 +55,8 @@ public class LiteBoard {
     }
 
     public int      getSide(int ndx) {
-        return ((board[ndx] & LiteUtil.Side) >> 4) & 1;
+        int result = (((board[ndx] & LiteUtil.Side) >>> 4) & 0x01);
+        return result;
     }
 
     public boolean  hasMoved(int ndx) {
@@ -88,32 +89,44 @@ public class LiteBoard {
 
     public LiteBoard(LiteBoard orig) {
         board   = new byte[BOARD_SIZE];
-        history = new Move[256];
         moves1  = new Move[256];
         moves2  = new Move[256];
-        taken1  = new byte[16];
-        taken2  = new byte[16];
         pieces1 = new byte[16];
         pieces2 = new byte[16];
+        taken1  = new byte[16];
+        taken2  = new byte[16];
+        history = new Move[256];
 
-        lastMove   = orig.lastMove;
-        maxRep     = orig.maxRep;
-        turn       = orig.turn;
         numMoves1  = orig.numMoves1;
         numMoves2  = orig.numMoves2;
-        numHist    = orig.numHist;
-        numTaken1  = orig.numTaken1;
-        numTaken2  = orig.numTaken2;
+
         numPieces1 = orig.numPieces1;
         numPieces2 = orig.numPieces2;
+
+        numTaken1  = orig.numTaken1;
+        numTaken2  = orig.numTaken2;
+
+        numHist    = orig.numHist;
+
+        turn       = orig.turn;
         turns      = orig.turns;
+        maxRep     = orig.maxRep;
+        lastMove   = new Move(orig.lastMove);
+
         blkKingLoc = orig.blkKingLoc;
         whtKingLoc = orig.whtKingLoc;
 
         System.arraycopy(orig.board,   0, board,   0, BOARD_SIZE);
 
-        System.arraycopy(orig.moves1,  0, moves1,  0, numMoves1);
-        System.arraycopy(orig.moves2,  0, moves2,  0, numMoves2);
+//      System.arraycopy(orig.moves1,  0, moves1,  0, numMoves1);
+        for (int ndx=0; ndx < numMoves1; ndx++) {
+            moves1[ndx] = new Move(orig.moves1[ndx]);
+        }
+
+//        System.arraycopy(orig.moves2,  0, moves2,  0, numMoves2);
+        for (int ndx=0; ndx < numMoves2; ndx++) {
+            moves2[ndx] = new Move(orig.moves2[ndx]);
+        }
 
         System.arraycopy(orig.pieces1,   0, pieces1, 0, numPieces1);
         System.arraycopy(orig.pieces2,   0, pieces2, 0, numPieces2);
@@ -124,19 +137,20 @@ public class LiteBoard {
         System.arraycopy(orig.history, 0, history, 0, numHist);
     }
 
+
     public LiteBoard() {
         board   = new byte[BOARD_SIZE];
         moves1  = new Move[256];
         moves2  = new Move[256];
-        history = new Move[256];
         pieces1 = new byte[16];
         pieces2 = new byte[16];
         taken1  = new byte[16];
         taken2  = new byte[16];
+        history = new Move[256];
 
         lastMove = new Move(8, 8, 8, 8, 0);
-        turn = Side.White;
         maxRep = 3;
+        turn = Side.White;
         turns = 1;
 
         numMoves1 = moves1.length;
@@ -427,6 +441,12 @@ public class LiteBoard {
         for (int i = 0; i < numMoves2; i++) {
             moves2[i] = moves.get(i);
         }
+
+        // at this point the Side (Black or White) constant is in the .turn value
+        // for the board.  Whichever color is to move next, it's moves are in
+        // moves1 and the non-moving players moves are in moves2.  Also both
+        // pieces1 and pieces2 are updated to contain the pieces with the same
+        // logic, pieces1 is for whoever's color is in .turn, the other in pieces2.
     }
 
 
@@ -447,30 +467,17 @@ public class LiteBoard {
 
     public boolean kingInCheck(final int side) {
         int otherSide = (side + 1) % 2;
-        if (false) {
-            Move[] opponentMoves;
-            int numMoves = 0;
-            if (otherSide == turn) {
-                numMoves = numMoves1;
-                opponentMoves = moves1;
-            } else {
-                numMoves = numMoves2;
-                opponentMoves = moves2;
-            }
-        } else {
+        List<Move> opponentMoves = getMoves(otherSide, false);
+        int numMoves = opponentMoves.size();
 
-            List<Move> opponentMoves = getMoves(otherSide, false);
-            int numMoves = opponentMoves.size();
-
-            for (int ndx = 0; ndx < BOARD_SIZE; ndx++) {
-                if (getType(ndx) != King || getSide(ndx) != side) continue;
-                for (int k = 0; k < numMoves; k++) {
-                    if (opponentMoves.get(k).getTo() == ndx) {
-                        return true;
-                    }
+        for (int ndx = 0; ndx < BOARD_SIZE; ndx++) {
+            if (getType(ndx) != King || getSide(ndx) != side) continue;
+            for (Move move : opponentMoves) {
+                if (move.getTo() == ndx) {
+                    return true;
                 }
-                break;
             }
+            break;
         }
         return false;
     }
@@ -485,6 +492,11 @@ public class LiteBoard {
         int ty = move.getToRow();
         int fi = move.getFrom();
         int ti = move.getTo();
+
+        // some debug/sanity checks:
+        assert getType(fi) != Empty : "attempt to execute move on empty spot";
+        assert isEmpty(ti) || getSide(ti) != getSide(fi) : "move seems to capture piece of its own side";
+        assert isEmpty(ti) || getSide(ti) != getSide(fi) : "move seems to capture piece of its own side";
 
         // special check for en passant
         int type = getType(fi);
@@ -545,9 +557,23 @@ public class LiteBoard {
     }
 
 
+    /**
+     * Advance the total number of moves in the game.
+     * Also toggle which players turn it is, and generates
+     * the following changes in the board:
+     *
+     *      + .turn  contains the color of the new player to move next
+     *      + .turns contains the total number of moves made so far
+     *
+     *      + move list for current     moving player are in moves1     (turn's Side color: Black or White)
+     *      + move list for current non-moving player are in moves2     ( ((turn + 1) % 2)'s Side color: Black or White)
+     *      + piece list for current     moving player are in pieces1
+     *      + piece list for current non-moving player are in pieces2
+     *
+     */
     public void advanceTurn() {
         turns++;
-        turn = (turn + 1) % 2;
+        turn = ((turn + 1) % 2);
         generateMoveLists();
     }
 
