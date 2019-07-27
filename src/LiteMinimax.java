@@ -34,14 +34,15 @@ import java.util.Map;
 public class LiteMinimax implements Serializable {
     private static final long serialVersionUID = 7249069248361182397L;
 
-    private final ExecutorService pool = Executors.newFixedThreadPool(100);
     private final ExecutorService executorForMainSearch = Executors.newSingleThreadExecutor();
+    private final ExecutorService pool = Executors.newFixedThreadPool(100);
     private final Object processedLock = new Object();
     private volatile Future<Move> currentSearch;
+    private FutureTask<BestMove>[] threadStack;
     private double acceptableRiskLevel;
     private Consumer<String> callback;
-    private FutureTask[] threadStack;
     private String serDeserFilename;
+    private long searchTimeLimit;
     private long movesProcessed;
     private long gameDuration;
     private boolean maximize;
@@ -49,7 +50,6 @@ public class LiteMinimax implements Serializable {
     private int maxThreads;
     private int numThreads;
     private int startDepth;
-    private long searchTimeLimit;
     private long gameTime;
     private int throttle;
     public BestMove best;
@@ -431,7 +431,7 @@ public class LiteMinimax implements Serializable {
 
         // Clear the best move we have for this search and set the time limit for them to finish.
         // If maxSeconds == 0 then the threads ignore the time limit and run to completion.
-        searchTimeLimit = System.nanoTime() + (maxSeconds * 1_000_000_000L);
+        searchTimeLimit = (maxSeconds == 0) ? 0 : System.nanoTime() + (maxSeconds * 1_000_000_000L);
         best = new BestMove(maximize);
 
         // Start the search threads, one for each one of our moves:
@@ -500,17 +500,19 @@ public class LiteMinimax implements Serializable {
      */
     private Move finishCurrentSearch(final LiteBoard board, PieceMap pieceMap) {
         // Now we wait on all of the threads to finish so we can see which has the best score
-        long origMaxSeconds = maxSeconds;
 
-        for (int i = 0; i < numThreads; ++i) {
+        for (int index=0; index < numThreads; index++) {
             BestMove threadResult;
 
             try {
-                threadResult = (BestMove) threadStack[i].get();
+                threadResult = (BestMove) threadStack[index].get();
             } catch (Exception e) {
-                System.out.println("\nWe're having problems waiting for move threads to finish..\n");
+                Main.log(Main.LogLevel.DEBUG, "We're having problems waiting for move threads to finish");
+                StackTraceElement[] stack = e.getStackTrace();
+                for (StackTraceElement elem : stack) {
+                    Main.log(Main.LogLevel.DEBUG, elem.toString());
+                }
                 continue;
-//              e.printStackTrace();
             }
 
             if (threadResult == null) {
@@ -519,7 +521,6 @@ public class LiteMinimax implements Serializable {
                 //
                 // I guess we just loop back and continue gathering other threads as
                 // they complete until we're done with all of them
-
                 continue;
             }
 
@@ -555,25 +556,12 @@ public class LiteMinimax implements Serializable {
             if (best.move != null) {
                 cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
             }
-
-            // If we are out of time then return the best outcome we've seen this move accomplish
-            if (maxSeconds > 0 && System.nanoTime() >= searchTimeLimit) {
-                maxSeconds = 1L;
-                searchTimeLimit = System.nanoTime();
-                continue;
-            }
         }
-
-        maxSeconds = origMaxSeconds;
 
         // We are finished making all available moves for the current player for
         // this board setup and gathered the result of each.  If we have a best move
-        // to suggest for this board, add it to the map of known moves for this board
-        // state in case it is the best:
-        //
-        if (best.move != null) {
-            cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
-        }
+        // to suggest for this board it should have been set in the loop above as it
+        // examined each search thread's results
 
         // Return the best move found for this board setup:
         return best.move;
@@ -586,21 +574,16 @@ public class LiteMinimax implements Serializable {
      */
     private void cancelThreadStack() {
         if (threadStack == null) return;
-        long oldMaxSeconds = maxSeconds;
-        maxSeconds = 1L;
         searchTimeLimit = System.nanoTime();
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        maxSeconds = oldMaxSeconds;
     }
 
     private void cancelSearchAndWait() {
         if (currentSearch != null) {
-            long keepOrigMaxSeconds = maxSeconds;
-            maxSeconds = 1L;
             searchTimeLimit = System.nanoTime();
             boolean completed = moveSearchIsDone();
             while (!completed) {
@@ -611,7 +594,6 @@ public class LiteMinimax implements Serializable {
                 }
                 completed = moveSearchIsDone();
             }
-            maxSeconds = keepOrigMaxSeconds;
             currentSearch = null;
             threadStack = null;
             numThreads = 0;
@@ -891,7 +873,7 @@ public class LiteMinimax implements Serializable {
 
     /**
      * The awesome, one and only, minimax algorithm method which recursively searches
-     * for the best moves up to s certain number of moves ahead (plies) or until a
+     * for the best moves up to a certain number of moves ahead (plies) or until a
      * move timeout occurs (if any timeouts are in effect).
      *
      * @param origBoard the board state to examine all moves for
@@ -904,7 +886,7 @@ public class LiteMinimax implements Serializable {
      * @param maximize  true if we are looking for a board state with the maximum score (white player's turn)
      *                  false if we are looking for a board state with the lowest score (black player's turn)
      * @return the best score this move (and all consequential response/exchanges up to the allowed
-     * look-ahead depth or time limit for searching).
+     *         look-ahead depth or time limit for searching).
      */
     int minmax(final LiteBoard origBoard, int alpha, int beta, int depth, boolean maximize) {
         BestMove mmBest = new BestMove(maximize);
@@ -932,7 +914,7 @@ public class LiteMinimax implements Serializable {
             // at the end of a ply, and not know that in response we lose our queen!
             //
             // This is known as quiescent searching.
-            //
+
             if (depth <= 0) {
                 if ((move.getValue() == 0) || depth < -2) {
                     addNumMovesExamined(mmBest.movesExamined);
@@ -942,7 +924,7 @@ public class LiteMinimax implements Serializable {
 
             ///////////////////////////////////////////////////////////////////
             // Before we try to find our own best move for this board state, see
-            // if one is already registered:
+            // if one is already cached:
 
             gotCacheHit = false;
             check = null;
@@ -989,7 +971,7 @@ public class LiteMinimax implements Serializable {
 
                 Thread.yield();
 
-                // The minimax step
+                // The recursive minimax step
                 // While we have the depth keep looking ahead to see what this move accomplishes
                 lookAheadValue = minmax(currentBoard, alpha, beta, depth - 1, !maximize);
 
@@ -1025,7 +1007,7 @@ public class LiteMinimax implements Serializable {
             }
 
             // If we are out of time then return the best outcome we've seen this move accomplish
-            if (maxSeconds > 0 && System.nanoTime() >= searchTimeLimit) {
+            if (searchTimeLimit > 0 && System.nanoTime() >= searchTimeLimit) {
                 break;
             }
 
