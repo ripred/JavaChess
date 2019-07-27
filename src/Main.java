@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter;
 
 public class Main {
 
-    static BiPredicate<List<String>, Map<String, String>> containsAny = (strList, optMap) -> {
+    private static BiPredicate<List<String>, Map<String, String>> containsAny = (strList, optMap) -> {
         for (String key : strList) {
             if (optMap.containsKey(key)) return true;
         }
@@ -36,7 +36,6 @@ public class Main {
     public static String serialFilename = "chessMoves.ser";
 
     private static LiteMinimax liteAgent = null;
-    private static List<List<Integer>> stats = null;
     private static String configFile = "chess.properties";
     public static String logFile = "chess.log";
     public static BufferedWriter logWriter = null;
@@ -44,6 +43,8 @@ public class Main {
     public static int maxDepth = 2;
     public static int maxSeconds = 0;
     public static double riskLevel = 0.25;
+    public static int refreshRate = 1000;
+
 
     public enum LogLevel {
         DEBUG (0, "DEBUG"),
@@ -129,21 +130,6 @@ public class Main {
         return output;
     }
 
-    private static void writeStatsFile() {
-        if (options.containsKey("statsfile")) {
-            try {
-                BufferedWriter writer = new BufferedWriter(new FileWriter(options.get("statsfile")));
-                writer.write("\"MoveCount\",\"Standard\",\"Quiescent\"\n");
-                for (List<Integer> list : stats) {
-                    writer.write(String.format("%d,%d,%d\n", list.get(0), list.get(1), list.get(2)));
-                }
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     private static void parseCmdline(String[] args) {
         options = new HashMap<>();
 
@@ -171,7 +157,6 @@ public class Main {
         System.out.println("                                Higher value mean less tested moves will be accepted.");
         System.out.println("    -log                        Activity and debug info will be written to chess.log");
         System.out.println("    -log=file                   Activity and debug info will be written to specified log file");
-        System.out.println("    -statsfile=file             write statistics to stats file on exit");
         System.out.println("    -profwait=num               delay num seconds after startup to allow profiler to start");
         System.out.println("    -throttle=num               sleep num nanoseconds on each minmax test");
         System.out.println("    -refresh=num                update the display every num milliseconds");
@@ -194,10 +179,6 @@ public class Main {
 
         if (config != null) {
             config.saveConfiguration();
-        }
-
-        if (options != null && options.containsKey("statsfile")) {
-            writeStatsFile();
         }
 
         if (options.containsKey("log")) {
@@ -265,6 +246,10 @@ public class Main {
             maxSeconds = Integer.parseInt(options.get("maxtime"));
         }
 
+        if (options.containsKey("refresh")) {
+            refreshRate = Integer.parseInt(options.get("refresh"));
+        }
+
         liteAgent = new LiteMinimax(serialFilename, maxDepth, maxSeconds);
 
         liteBoard = new LiteBoard();
@@ -277,9 +262,10 @@ public class Main {
 
             exit(0);
         };
+
         try {
             Signal.handle(new Signal("INT"), sigHandler);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             e.printStackTrace();
         }
 
@@ -288,10 +274,6 @@ public class Main {
                 EngineTuningTests.runTestSuites();
                 System.exit(0);
             }
-        }
-
-        if (options.containsKey("statsfile")) {
-            stats = new ArrayList<>();
         }
 
         if (options.containsKey("profwait")) {
@@ -400,51 +382,37 @@ public class Main {
                     "* Somehow we allowed a move that put the king in check! *",
                     liteAgent, moveStart, gameStart, true);
             StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-            for (StackTraceElement s : stack) {
-//                System.out.print(s.toString());
-                log(LogLevel.ERROR, s.toString());
+            for (StackTraceElement elem : stack) {
+                log(LogLevel.ERROR, elem.toString());
             }
             return null;
         }
 
+        // The single point where we launch (and own as a thread ourselves) the search thread owner, and
+        // it's child threads.  The complimentary join() back together is noted below.
         Move move = liteAgent.bestMove(board, true);
 
         while (move == null) {
             showBoard(board, moveDesc, liteAgent, moveStart, gameStart, false);
 
-            if (options.containsKey("statsfile")) {
-                writeStatsFile();
-            }
-
-            int refreshRate = 1000;
-            if (options.containsKey("refresh"))
-                refreshRate = Integer.parseInt(options.get("refresh"));
             Thread.sleep(refreshRate);
 
-            // make sure the board state hasn't changed to completed
-            if (board.numMoves1 == 0
-                    || board.numMoves2 == 0
-                    || board.checkDrawByRepetition(board.lastMove, board.maxRep)) {
-                return null;
-            }
-
-
-            long delayTime = System.nanoTime() + 1_500_000_000L;
-            // !!! *** The single point where we join() with the existing search thread if it is finished *** !!!
-            boolean lastSearchCompleted = false;
+            // The single point where we join() with the existing search thread if it is finished
             boolean searchCompleted = liteAgent.moveSearchIsDone();
-            if (searchCompleted && !lastSearchCompleted) {
-                // we just transitioned to the completed search. Delay a small amount
-                // to allow the threads in the background to complete and be joined
-                // with the controlling thread pool
-                lastSearchCompleted = searchCompleted;
+            if (searchCompleted) {
+                // we just join()ed back together with the completed search thread (and it's child threads join()ed to
+                // it before that).
 
-                showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
+                showBoard(board, moveDesc, liteAgent, moveStart, gameStart, true);
 
                 // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
                 // and then suddenly fly through 8 moves that get decided quickly by the AI
-                while (System.nanoTime() < delayTime) {
-                    Thread.yield();
+                final long minMoveRate = 750_000_000L;
+                if (System.nanoTime() - moveStart < minMoveRate) {
+                    long delayTime = System.nanoTime() + minMoveRate;
+                    while (System.nanoTime() < delayTime) {
+                        Thread.yield();
+                    }
                 }
             }
 
@@ -453,8 +421,11 @@ public class Main {
             if (searchCompleted) {
                 move = liteAgent.getBestMove();
                 if (move == null) {
-                    // it's still null even after saying the search is complete, so this is the end of the game
-                    return null;
+                    // It is still null even after saying the search is complete so this is the end of the game.  Remove
+                    // the best move value from the agent so it doesn't get highlighted and re-display the final game board
+                    liteAgent.best = null;
+                    showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
+                    break;
                 }
             }
         }
