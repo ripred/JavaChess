@@ -36,7 +36,7 @@ public class LiteBoard {
     public byte[] pieces2;
 
 
-    // accessors for board spot utils
+    // utility functions for board location attributes like piece side, piece type, etc
     final public static int  Empty  = 0b00000000;
     final public static int  Pawn   = 0b00000001;
     final public static int  Knight = 0b00000010;
@@ -87,6 +87,12 @@ public class LiteBoard {
         board[ndx] = LiteUtil.setCheck(board[ndx], inCheck);
     }
 
+
+    /**
+     * Copy-constructor for new LiteBoard objects
+     *
+     * @param orig the LiteBoard object to copy from to create this new board instance
+     */
     public LiteBoard(LiteBoard orig) {
         board   = new byte[BOARD_SIZE];
         moves1  = new Move[256];
@@ -118,12 +124,10 @@ public class LiteBoard {
 
         System.arraycopy(orig.board,   0, board,   0, BOARD_SIZE);
 
-//      System.arraycopy(orig.moves1,  0, moves1,  0, numMoves1);
         for (int ndx=0; ndx < numMoves1; ndx++) {
             moves1[ndx] = new Move(orig.moves1[ndx]);
         }
 
-//        System.arraycopy(orig.moves2,  0, moves2,  0, numMoves2);
         for (int ndx=0; ndx < numMoves2; ndx++) {
             moves2[ndx] = new Move(orig.moves2[ndx]);
         }
@@ -138,6 +142,11 @@ public class LiteBoard {
     }
 
 
+    /**
+     * Default constructor for a new LiteBoard object.
+     * Note: This initializes the contents of the board to contain the pieces for
+     * the two sides arranged for a new game.
+     */
     public LiteBoard() {
         board   = new byte[BOARD_SIZE];
         moves1  = new Move[256];
@@ -493,7 +502,7 @@ public class LiteBoard {
         int fi = move.getFrom();
         int ti = move.getTo();
 
-        // some debug/sanity checks:
+        // do some quick debug/sanity checks:
         assert getType(fi) != Empty : "attempt to execute move on empty spot";
         assert isEmpty(ti) || getSide(ti) != getSide(fi) : "move seems to capture piece of its own side";
         assert isEmpty(ti) || getSide(ti) != getSide(fi) : "move seems to capture piece of its own side";
