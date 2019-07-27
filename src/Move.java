@@ -69,8 +69,12 @@ public class Move implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("[Move from:%d,%d to %d,%d value:%d]",
-                fromCol, fromRow, toCol, toRow, value);
+        String chessNotation = String.format("%c%d to %c%d",
+                fromCol + 'a', 8 - fromRow,
+                toCol   + 'a', 8 - toRow);
+
+        return String.format("[Move from:%d,%d to %d,%d (%s) value:%d]",
+                fromCol, fromRow, toCol, toRow, chessNotation, value);
     }
 }
 
