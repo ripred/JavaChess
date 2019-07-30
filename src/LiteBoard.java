@@ -493,8 +493,6 @@ public class LiteBoard {
 
 
     public void executeMove(final Move move) {
-        lastMove = new Move(move);
-
         int fx = move.getFromCol();
         int fy = move.getFromRow();
         int tx = move.getToCol();
@@ -503,9 +501,27 @@ public class LiteBoard {
         int ti = move.getTo();
 
         // do some quick debug/sanity checks:
-        assert getType(fi) != Empty : "attempt to execute move on empty spot";
-        assert isEmpty(ti) || getSide(ti) != getSide(fi) : "move seems to capture piece of its own side";
-        assert isEmpty(ti) || getSide(ti) != getSide(fi) : "move seems to capture piece of its own side";
+        if (move.equals(lastMove)) {
+            String dbgMsg = String.format("say wha?! move seems to be the same move we last made: %s", move);
+            Main.log(Main.LogLevel.DEBUG, dbgMsg);
+            Main.bailOnInternalError(dbgMsg);
+        }
+
+        if (getType(fi) == Empty) {
+            String dbgMsg = String.format("move seems to start at an empty spot: %s", move);
+            Main.log(Main.LogLevel.DEBUG, dbgMsg);
+            Main.bailOnInternalError(dbgMsg);
+        }
+
+        if (!isEmpty(ti)) {
+            int sideToMove = getSide(fi);
+            int sideAtDest = getSide(ti);
+            if (sideToMove == sideAtDest) {
+                String dbgMsg = String.format("move seems to capture piece of its own side: %s", move);
+                Main.log(Main.LogLevel.DEBUG, dbgMsg);
+                Main.bailOnInternalError(dbgMsg);
+            }
+        }
 
         // special check for en passant
         int type = getType(fi);
@@ -563,6 +579,8 @@ public class LiteBoard {
             System.arraycopy(history, history.length / 4, history, 0, numHist);
         }
         history[numHist++] = move;
+
+        lastMove = new Move(move);
     }
 
 

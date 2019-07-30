@@ -1,4 +1,5 @@
 import static java.lang.System.exit;
+import static java.lang.Thread.yield;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -17,7 +18,6 @@ import java.util.regex.Pattern;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
-import javax.swing.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -37,14 +37,18 @@ public class Main {
 
     private static LiteMinimax liteAgent = null;
     private static String configFile = "chess.properties";
+    private static List<List<String>> bailedStackList = null;
     public static String logFile = "chess.log";
     public static BufferedWriter logWriter = null;
-    static LogLevel logLevel = LogLevel.DEBUG;
+    public static LogLevel logLevel = LogLevel.DEBUG;
     public static int maxDepth = 2;
     public static int maxSeconds = 0;
     public static double riskLevel = 0.25;
     public static int refreshRate = 1000;
-
+    public static boolean searchInBackground = true;
+    public static boolean useCache = true;
+    public static boolean useThreads = true;
+    public static Thread mainThread = Thread.currentThread();
 
     public enum LogLevel {
         DEBUG (0, "DEBUG"),
@@ -143,6 +147,39 @@ public class Main {
                     options.put(key, value);
                 }
             }
+
+            if (containsAny.test(Arrays.asList("?", "help", "h"), options)) {
+                outputUsage();
+                System.exit(0);
+            }
+
+            if (options.containsKey("configfile")) {
+                configFile = options.get("configfile");
+            }
+
+            if (options.containsKey("risk")) {
+                riskLevel = Double.parseDouble(options.get("risk")) / 100.0f;
+            }
+
+            if (options.containsKey("maxtime")) {
+                maxSeconds = Integer.parseInt(options.get("maxtime"));
+            }
+
+            if (options.containsKey("refresh")) {
+                refreshRate = Integer.parseInt(options.get("refresh"));
+            }
+
+            if (options.containsKey("background")) {
+                searchInBackground = options.get("background").toLowerCase().equals("true");
+            }
+
+            if (options.containsKey("cache")) {
+                useCache = options.get("cache").toLowerCase().equals("true");
+            }
+
+            if (options.containsKey("threads")) {
+                useThreads = options.get("threads").toLowerCase().equals("true");
+            }
         }
     }
 
@@ -196,10 +233,26 @@ public class Main {
         }
 
         if (liteAgent != null) {
-            try {
-                liteAgent.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (!useThreads) {
+                assert liteAgent.currentSearch == null : "background thread should be null on minimax search";
+            } else {
+                // stop any current search if running
+                if (liteAgent.currentSearch != null) {
+                    // attempt to join with background search threads
+                    liteAgent.cancelThreadStack(1000);
+
+                    long waitTime = 3_000_000_000L;
+                    long stopTime = System.nanoTime() + waitTime;
+                    while (!liteAgent.moveSearchIsDone() && System.nanoTime() < stopTime) {
+                        yield();
+                    }
+                }
+
+                try {
+                    liteAgent.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -210,27 +263,76 @@ public class Main {
 
         // Turn the cursor back on
         System.out.println(Ansi.cursOn);
+
+        exit(0);
     }
 
+    public static void bailOnInternalError(String issue) {
+        // somewhere an internal sanity check failed.  Since the calling thread
+        // that will execute this code is quite possibly *not* the main thread
+        // we can't join() the other threads here because we may not be running
+        // as the main parent thread.  So we store away the error, gather the current stack
+        // as strings and store them as well, and do nothing.
+        // Main thread will periodically check the "bailed threads message list" and
+        // if it's not empty it will join() old threads, display the messages in the
+        // bailed thread list, and cleanly exit.
+
+        List<String> msgList = new ArrayList<>();
+        msgList.add("*** " + issue);
+
+        Thread thisThread = Thread.currentThread();
+        StackTraceElement[] stack = thisThread.getStackTrace();
+        for (StackTraceElement elem : stack) {
+            msgList.add(elem.toString());
+        }
+
+        if (bailedStackList == null) {
+            bailedStackList = new ArrayList<>();
+            bailedStackList.add(msgList);
+        }
+
+        if (thisThread == mainThread) {
+            System.out.println("\n");
+            for (List<String> list :bailedStackList) {
+                for (String msg : list) {
+                    log(LogLevel.ERROR, msg);
+                    System.out.println(msg);
+                }
+            }
+            onAppExit();
+        }
+    }
+
+    public static void checkBailedList() {
+        if (bailedStackList != null) {
+            System.out.println("\n");
+            for (List<String> list :bailedStackList) {
+                for (String msg : list) {
+                    log(LogLevel.ERROR, msg);
+                    System.out.println(msg);
+                }
+            }
+            showBoard(liteBoard, null, liteAgent, 0, 0, true);
+
+            Thread thisThread = Thread.currentThread();
+            if (thisThread == mainThread) {
+                System.out.println("\n");
+                for (List<String> list :bailedStackList) {
+                    for (String msg : list) {
+                        log(LogLevel.ERROR, msg);
+                        System.out.println(msg);
+                    }
+                }
+                onAppExit();
+            }
+        }
+    }
 
     public static void main(String[] args) throws InterruptedException {
 
         setLogLevel(LogLevel.DEBUG);
 
         parseCmdline(args);
-
-        if (containsAny.test(Arrays.asList("?", "help", "h"), options)) {
-            outputUsage();
-            System.exit(0);
-        }
-
-        if (options.containsKey("risk")) {
-            riskLevel = Double.parseDouble(options.get("risk")) / 100.0f;
-        }
-
-        if (options.containsKey("configfile")) {
-            configFile = options.get("configfile");
-        }
 
         config = new ChessConfig(configFile);
         config.loadConfiguration();
@@ -242,14 +344,6 @@ public class Main {
             maxDepth = Integer.parseInt(options.get("ply"));
         }
 
-        if (options.containsKey("maxtime")) {
-            maxSeconds = Integer.parseInt(options.get("maxtime"));
-        }
-
-        if (options.containsKey("refresh")) {
-            refreshRate = Integer.parseInt(options.get("refresh"));
-        }
-
         liteAgent = new LiteMinimax(serialFilename, maxDepth, maxSeconds);
 
         liteBoard = new LiteBoard();
@@ -258,9 +352,9 @@ public class Main {
         SignalHandler sigHandler = sig -> {
             // handle SIGINT (e.g. user hit ctrl-c)
 
-            onAppExit();
+            checkBailedList();
 
-            exit(0);
+            onAppExit();
         };
 
         try {
@@ -301,7 +395,7 @@ public class Main {
         Move move;
 
         liteAgent.registerDisplayCallback(s ->
-            showBoard(liteBoard, s, liteAgent, 0, gameStart, true)
+            showBoard(liteBoard, s + Ansi.clearEOL, liteAgent, 0, gameStart, true)
         );
 
         System.out.println();
@@ -326,6 +420,8 @@ public class Main {
             liteBoard.executeMove(move);
             liteBoard.advanceTurn();
 
+            checkBailedList();
+
             assert liteBoard.turn != turn : "The '.turn' instance variable on the LiteBoard did not move to the other" +
                     " player";
 
@@ -341,10 +437,13 @@ public class Main {
 
             assert (liteBoard.lastMove != null);
             int lastMoveToIndex = liteBoard.lastMove.getTo();
-            assert liteBoard.getType(lastMoveToIndex) != LiteBoard.Empty : "The last move did not seem to take " +
-                    "effect on the board";
+            if (liteBoard.getType(lastMoveToIndex) == LiteBoard.Empty) {
+                bailOnInternalError("The last move did not seem to take effect on the board: " + liteBoard.lastMove);
+            }
 
-            assert liteBoard.numPieces1 > 0 : "Current player has no pieces?";
+            if (liteBoard.numPieces1 == 0) {
+                bailOnInternalError("Current player has no pieces?");
+            }
 
 // WTF? FixMe!
 //            assert liteBoard.getSide(liteBoard.lastMove.getTo()) != LiteUtil.getSide(liteBoard.pieces1[0]) : "Last " +
@@ -359,7 +458,7 @@ public class Main {
 
         String boardFinal = showBoardImpl(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true, true);
 
-        writeToScreenfile(boardFinal
+        writeToScreenFile(boardFinal
                 + getGameSummary(liteBoard)
                 + getTotalGameTime(gameStart));
         System.out.println(getGameSummary(liteBoard) + getTotalGameTime(gameStart));
@@ -388,12 +487,14 @@ public class Main {
             return null;
         }
 
-        // The single point where we launch (and own as a thread ourselves) the search thread owner, and
+        // The single point where we launch (and own as the parent thread ourselves) the search thread owner, and
         // it's child threads.  The complimentary join() back together is noted below.
-        Move move = liteAgent.bestMove(board, true);
+        Move move = liteAgent.bestMove(board, searchInBackground);
 
         while (move == null) {
             showBoard(board, moveDesc, liteAgent, moveStart, gameStart, false);
+
+            checkBailedList();
 
             Thread.sleep(refreshRate);
 
@@ -403,15 +504,18 @@ public class Main {
                 // we just join()ed back together with the completed search thread (and it's child threads join()ed to
                 // it before that).
 
+                checkBailedList();
+
                 showBoard(board, moveDesc, liteAgent, moveStart, gameStart, true);
 
                 // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
-                // and then suddenly fly through 8 moves that get decided quickly by the AI
+                // and then suddenly fly through 8 moves that get decided quickly by the AI faster than we can watch
+                // and follow
                 final long minMoveRate = 750_000_000L;
                 if (System.nanoTime() - moveStart < minMoveRate) {
                     long delayTime = System.nanoTime() + minMoveRate;
                     while (System.nanoTime() < delayTime) {
-                        Thread.yield();
+                        yield();
                     }
                 }
             }
@@ -432,10 +536,12 @@ public class Main {
         return move;
     }
 
+
+
 //    private static final String[] charSetAscii = {"   "," p "," n "," b "," r "," q "," k "};
     private static final String[] charSetUnicodeWhite = {"   ", " ♙ ", " ♞ ", " ♝ ", " ♜ ", " ♛ ", " ♚ "};
 
-    private static void writeToScreenfile(String output) {
+    private static void writeToScreenFile(String output) {
         if (!options.containsKey("screenfile"))
             return;
 
@@ -459,7 +565,7 @@ public class Main {
         // get the output formatted for storing in a file
         if (options.containsKey("screenfile")) {
             output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, true, searchDone);
-            writeToScreenfile(output);
+            writeToScreenFile(output);
         }
     }
 

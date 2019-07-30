@@ -90,6 +90,8 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
 
     // static method to return the map key to be used for a given board state
     public static String getBoardKey(byte[] boardBytes) {
+        assert Main.useCache : "cache is not in use.  this should not be called.";
+
         char[] hash = {
                 ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
                 ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
@@ -125,22 +127,40 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
      * @param movesExamined the number of moves examined to find this move
      */
     public void addMoveValue(byte[] b, boolean maximize, Move move, Integer value, int movesExamined) {
+        if (!Main.useCache) {
+            return;
+        }
+
         try {
             // quick validation of the move:
             // get the 'from' spot of this move
             int fi = move.getFrom();
 
             // make sure it points within a board
-            if ((fi < 0) || (fi > 63)) return;
+            if ((fi < 0) || (fi > 63)) {
+                String dbgMsg = String.format("move location is out of bounds: %d", fi);
+                Main.log(Main.LogLevel.DEBUG, dbgMsg);
+                Main.bailOnInternalError(dbgMsg);
+
+                return;
+            }
+
+            String key = getBoardKey(b);
 
             // Make sure there is a still a piece on the board in
             // the spot this move points to.
 
             // Not sure how this fails since the board key indicates pieces at
             // spots this move is supposed to be related to.  Investigate.
-            if (LiteUtil.isEmpty(b[fi])) return;
+            if (LiteUtil.isEmpty(b[fi])) {
+                char pieceAtKeyIndex = key.charAt(fi);
+                String dbgMsg = String.format("move start spot is empty: %d (pieceAtKeyIndex = '%c')", b[fi],
+                        pieceAtKeyIndex);
+                Main.log(Main.LogLevel.DEBUG, dbgMsg);
+                Main.bailOnInternalError(dbgMsg);
 
-            String key = getBoardKey(b);
+                return;
+            }
 
             // These moves were examined so add them to our total count
             // even if we ultimately don't keep this move as the 'best'.
@@ -219,10 +239,14 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
      */
     public BestMove lookupBestMove(byte[] b, boolean maximize) {
 
+        if (!Main.useCache) {
+            return null;
+        }
+
         String key = getBoardKey(b);
 
         // See if we have this board state
-        if (containsKey(key)) {
+        if (containsKey(key) && get(key).contains(maximize)) {
 
             // We do.  Get the maximize/minimize Move associated with it (if any)
             ConcurrentMap<Boolean, BestMove> bestMap = get(key);
@@ -278,7 +302,11 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
 
     public void deletePieceTaken(byte[] b, int index) {
 
-//        if (true) return;
+        if (!Main.useCache) {
+            return;
+        }
+
+        if (true) return;
 
         String key = getBoardKey(b);
         char takenChar = key.charAt(index);
@@ -301,7 +329,7 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
             tempArray = item.toCharArray();
             Arrays.sort(tempArray);
             String newItem = new String(tempArray);
-            lastSpace = key.lastIndexOf(' ');
+            lastSpace = newItem.lastIndexOf(' ');
             newItem = newItem.substring(lastSpace + 1);
 
             int firstItemChar = newItem.indexOf(takenChar);
@@ -322,7 +350,7 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
             return 1.0f;
         } else {
             MoveStat moveStat = moveRisk.get(key);
-            if (moveStat.numBetter == 0) {
+            if (moveStat.numRetries == 0) {
                 return 1.0f;
             } else {
                 return ((double) moveStat.numBetter / (double) moveStat.numRetries);
