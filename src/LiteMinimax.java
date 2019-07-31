@@ -122,9 +122,7 @@ public class LiteMinimax implements Serializable {
                     best = null;
                 }
                 currentSearch = null;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             } finally {
                 currentSearch = null;
@@ -456,66 +454,14 @@ public class LiteMinimax implements Serializable {
             pieceMap.get((int) LiteUtil.getSide(board.board[ndx])).get((int) LiteUtil.getType(board.board[ndx])).add(ndx);
         }
 
-        // See if threads are enabled
+        // If threads are not enabled then we search here and now on the current thread:
         if (!Main.useThreads) {
-            // We are not using threads.  Walk through all moves and find the best and return it in this calling thread.
-
-            for (int index = 0; index < board.numMoves1; index++) {
-                Move move = board.moves1[index];
-                LiteBoard currentBoard = new LiteBoard(board);
-                currentBoard.executeMove(move);
-                currentBoard.advanceTurn();
-
-                // See if we have a best move already stored away for this board arrangement:
-                if (currentBoard.numPieces1 > 5) {     // we force moves to be manually evaluated via minmax when we
-                    // get down to the end game
-                    BestMove check = cachedMoves.lookupBestMove(currentBoard.board, maximize);
-                    if (check != null && check.move != null) {
-                        double confidence = cachedMoves.getMoveRisk(currentBoard.board);
-                        if (confidence <= acceptableRiskLevel) {
-                            if ((!maximize && check.value < best.value) || (maximize && check.value > best.value)) {
-                                best = check;
-                                continue;
-                            }
-                        }
-                    }
-                }
-
-                int lookAheadVal = minmax(currentBoard, LiteUtil.MIN_VALUE, LiteUtil.MAX_VALUE,
-                        startDepth, !maximize);
-
-                if ((maximize && lookAheadVal > best.value) || (!maximize && lookAheadVal < best.value)) {
-                    best.value = lookAheadVal;
-                    best.move = move;
-                    best.move.setValue(best.value);
-                    cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
-                }
-
-//                if (best.move != null) {
-//                    cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
-//                }
-
-                // Check for specific corner cases when we might want to make
-                // specific kinds of moves for
-                Move check = checkEndGameCornerCases(board, pieceMap, best.move);
-                if (check != null) {
-                    best.move = check;
-                    best.move.setValue(best.value);
-                }
-
-                if (best.move != null) {
-                    cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
-                }
-            }
-            return best.move;
+            return searchWithNoThreads(board, pieceMap);
         }
-
 
         initThreadSupport();
 
-        // Cancel any existing parent search thread (and its threads) and create a new
-        // thread array to keep this new search in:
-//        cancelThreadStack(100);
+        // Cancel any existing parent search thread (and its child threads) before we start a new one
         cancelSearchAndWait();
 
         // Start the search threads, one for each one of our moves:
@@ -535,6 +481,74 @@ public class LiteMinimax implements Serializable {
         }
     }
 
+
+    /**
+     * Iterate over all available moves for the current player and decide which move is the best.
+     * This executes on the current thread and is a blocking call.
+     *
+     * @param board the board state to examine each move on
+     * @param pieceMap board pieces mapped by type and side
+     * @return the best move for this board or null if no legal move is available
+     */
+    private Move searchWithNoThreads(final LiteBoard board, PieceMap pieceMap) {
+        // We are not using threads.  Walk through all moves and find the best and return it in this calling thread.
+
+        for (int index = 0; index < board.numMoves1; index++) {
+            Move move = board.moves1[index];
+            LiteBoard currentBoard = new LiteBoard(board);
+            currentBoard.executeMove(move);
+            currentBoard.advanceTurn();
+
+            // See if we have a best move already stored away for this board arrangement:
+            if (currentBoard.numPieces1 > 5) {     // we force moves to be manually evaluated via minmax when we
+                // get down to the end game
+                BestMove check = cachedMoves.lookupBestMove(currentBoard.board, maximize);
+                if (check != null && check.move != null) {
+                    double confidence = cachedMoves.getMoveRisk(currentBoard.board);
+                    if (confidence <= acceptableRiskLevel) {
+                        if ((!maximize && check.value < best.value) || (maximize && check.value > best.value)) {
+                            best = check;
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            int lookAheadVal = minmax(currentBoard, LiteUtil.MIN_VALUE, LiteUtil.MAX_VALUE,
+                    startDepth, !maximize);
+
+            if ((maximize && lookAheadVal > best.value) || (!maximize && lookAheadVal < best.value)) {
+                best.value = lookAheadVal;
+                best.move = move;
+                best.move.setValue(best.value);
+                cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
+            }
+
+            if (best.move != null) {
+                cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
+            }
+
+            // Check for specific corner cases when we might want to make
+            // specific kinds of moves for
+            Move check = checkEndGameCornerCases(board, pieceMap, best.move);
+            if (check != null) {
+                best.move = check;
+                best.move.setValue(best.value);
+            }
+
+            if (best.move != null) {
+                cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
+            }
+        }
+        return best.move;
+    }
+
+    /**
+     * Launch a separate thread for each move available to the current player to move.
+     * All threads are stored in the threadStack[] array with numThreads threads in it.
+     *
+     * @param board the board to find the best move on.
+     */
     private void launchMoveThreads(final LiteBoard board) {
         // Loop through all of the moves available to the current player and launch a
         // thread for each one so each can go explore what good board valuations we
@@ -573,13 +587,12 @@ public class LiteMinimax implements Serializable {
         }
     }
 
-
     /**
-     * Method to watch the threads of an existing background search and gather their
-     * results as they complete.
+     * Call the get() method on the executor of the threads of an existing background search and gather their
+     * results as they complete, keeping track of which move was the best one returned.
      *
      * @param board the board state the search is for
-     * @return the best move found for this board state or null if no move was found
+     * @return the best move found for this board state or null if no legal move was found
      */
     private Move finishCurrentSearch(final LiteBoard board, PieceMap pieceMap) {
         // Now we wait on all of the threads to finish so we can see which has the best score
@@ -753,14 +766,6 @@ public class LiteMinimax implements Serializable {
                 return ourMoveMap.get(LiteBoard.Pawn).get(0);
             }
 
-
-
-
-//            if (true) return null;
-
-
-
-
             // see if we have any pawns at all
             PieceList ourPawns = ourPieces.get(LiteBoard.Pawn);
             if (!ourPawns.isEmpty()) {
@@ -808,15 +813,6 @@ public class LiteMinimax implements Serializable {
                 return endRepMove;
             }
         }
-
-
-
-
-        if (true) return null;
-
-
-
-
 
         if (bestMove == null) {
             return null;

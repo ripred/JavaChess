@@ -132,35 +132,7 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
         }
 
         try {
-            // quick validation of the move:
-            // get the 'from' spot of this move
-            int fi = move.getFrom();
-
-            // make sure it points within a board
-            if ((fi < 0) || (fi > 63)) {
-                String dbgMsg = String.format("move location is out of bounds: %d", fi);
-                Main.log(Main.LogLevel.DEBUG, dbgMsg);
-                Main.bailOnInternalError(dbgMsg);
-
-                return;
-            }
-
             String key = getBoardKey(b);
-
-            // Make sure there is a still a piece on the board in
-            // the spot this move points to.
-
-            // Not sure how this fails since the board key indicates pieces at
-            // spots this move is supposed to be related to.  Investigate.
-            if (LiteUtil.isEmpty(b[fi])) {
-                char pieceAtKeyIndex = key.charAt(fi);
-                String dbgMsg = String.format("move start spot is empty: %d (pieceAtKeyIndex = '%c')", b[fi],
-                        pieceAtKeyIndex);
-                Main.log(Main.LogLevel.DEBUG, dbgMsg);
-                Main.bailOnInternalError(dbgMsg);
-
-                return;
-            }
 
             // These moves were examined so add them to our total count
             // even if we ultimately don't keep this move as the 'best'.
@@ -270,16 +242,6 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
 
                 // Make sure there is a still a piece on the board in
                 // the spot this move points to.
-
-                // Not sure how this fails since the board key indicates pieces at
-                // spots this move is supposed to be related to.  Investigate.
-
-                // Hack to keep it from crashing until I can figure out how this fails
-                // FixMe!
-                if (LiteUtil.isEmpty(b[fi])) {
-                    return null;
-                }
-
                 assert !LiteUtil.isEmpty(b[fi]);
 
                 addNumMovesExamined(bm.movesExamined);

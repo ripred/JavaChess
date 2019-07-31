@@ -23,13 +23,6 @@ import java.time.format.DateTimeFormatter;
 
 public class Main {
 
-    private static BiPredicate<List<String>, Map<String, String>> containsAny = (strList, optMap) -> {
-        for (String key : strList) {
-            if (optMap.containsKey(key)) return true;
-        }
-        return false;
-    };
-
     public static LiteBoard liteBoard = null;
     public static Map<String, String> options = null;
     public static ChessConfig config = null;
@@ -49,6 +42,160 @@ public class Main {
     public static boolean useCache = true;
     public static boolean useThreads = true;
     public static Thread mainThread = Thread.currentThread();
+
+    public static void main(String[] args) throws InterruptedException, IllegalArgumentException {
+        setLogLevel(LogLevel.DEBUG);
+
+        // our signal handler - handle SIGINT (e.g. user hit ctrl-c) etc
+        SignalHandler sigHandler = sig -> {
+            onAppExit();
+        };
+        // Register our signal handler for the interrupt signal (SIGINT)
+        Signal.handle(new Signal("INT"), sigHandler);
+
+        parseCmdline(args);
+
+        config = new ChessConfig(configFile);
+        config.loadConfiguration();
+
+        maxDepth = config.maxDepth;
+        maxSeconds = config.maxSeconds;
+
+        if (options.containsKey("ply")) {
+            maxDepth = Integer.parseInt(options.get("ply"));
+        }
+
+        liteAgent = new LiteMinimax(serialFilename, maxDepth, maxSeconds);
+
+        liteBoard = new LiteBoard();
+        liteBoard.maxRep = config.maxDrawReps;
+
+        if (options.containsKey("test")) {
+            {
+                EngineTuningTests.runTestSuites();
+                System.exit(0);
+            }
+        }
+
+        if (options.containsKey("profwait")) {
+            Thread.sleep(Integer.parseInt(options.get("profwait")) * 1000);
+        }
+
+        if (options.containsKey("throttle")) {
+            liteAgent.setThrottle(Integer.parseInt(options.get("throttle")));
+        }
+
+        playGame(liteAgent);
+
+        onAppExit();
+    }
+
+
+    private static void playGame(final LiteMinimax liteAgent) throws InterruptedException {
+        for (int n = 0; n < 20; ++n) {
+            System.out.println("\n");
+        }
+
+        String moveDesc = "";
+        long gameStart = System.nanoTime();
+        long moveStart;
+        Move move;
+
+        liteAgent.registerDisplayCallback(s ->
+            showBoard(liteBoard, s + Ansi.clearEOL, liteAgent, 0, gameStart, true)
+        );
+
+        System.out.println();
+        showBoard(liteBoard, null, liteAgent, 0, 0, true);
+
+        moveStart = System.nanoTime();
+        move = getNextPlayersMove(liteBoard, liteAgent, null, moveStart, gameStart);
+
+        while (move != null) {
+            moveDesc = getMoveDesc(liteBoard, move);
+
+            int ndx = move.getTo();
+            if (!liteBoard.isEmpty(ndx)) {
+                // a piece is being taken.
+                // throw away move maps that had it:
+                liteAgent.cachedMoves.deletePieceTaken(liteBoard.board, ndx);
+            }
+
+            liteBoard.executeMove(move);
+            liteBoard.advanceTurn();
+
+            System.out.println();
+            showBoard(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true);
+
+            liteAgent.log(liteBoard);
+
+            moveStart = System.nanoTime();
+            move = getNextPlayersMove(liteBoard, liteAgent, moveDesc, moveStart, gameStart);
+        }
+
+        String boardFinal = showBoardImpl(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true, true);
+
+        writeToScreenFile(boardFinal
+                + getGameSummary(liteBoard)
+                + getTotalGameTime(gameStart));
+        System.out.println(getGameSummary(liteBoard) + getTotalGameTime(gameStart));
+    }
+
+
+    private static Move getNextPlayersMove(final LiteBoard board,
+                                           LiteMinimax liteAgent,
+                                           String moveDesc,
+                                           long moveStart,
+                                           long gameStart) throws InterruptedException {
+        if (config.humanPlayer) {
+            if ((board.turn == Side.White) ^ !config.humanMovesFirst) {
+                return getHumanMove(board);
+            }
+        }
+
+        // The single point where we launch (and own as the parent thread ourselves) the search thread owner, and
+        // it's child threads.  The complimentary join() back together is noted below.
+        Move move = liteAgent.bestMove(board, searchInBackground);
+
+        while (move == null) {
+            showBoard(board, moveDesc, liteAgent, moveStart, gameStart, false);
+            Thread.sleep(refreshRate);
+
+            // The single point where we join() with the existing search thread if it is finished
+            boolean searchCompleted = liteAgent.moveSearchIsDone();
+            if (searchCompleted) {
+                // we just join()ed back together with the completed search thread (and it's child threads join()ed to
+                // it before that).
+                showBoard(board, moveDesc, liteAgent, moveStart, gameStart, true);
+
+                // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
+                // and then suddenly fly through 8 moves that get decided quickly by the AI faster than we can watch
+                // and follow
+                final long minMoveRate = 750_000_000L;
+                if (System.nanoTime() - moveStart < minMoveRate) {
+                    long delayTime = System.nanoTime() + minMoveRate;
+                    while (System.nanoTime() < delayTime) {
+                        yield();
+                    }
+                }
+            }
+
+            showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
+
+            if (searchCompleted) {
+                move = liteAgent.getBestMove();
+                if (move == null) {
+                    // It is still null even after saying the search is complete so this is the end of the game.  Remove
+                    // the best move value from the agent so it doesn't get highlighted and re-display the final game board
+                    liteAgent.best = null;
+                    showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
+                    break;
+                }
+            }
+        }
+        return move;
+    }
+
 
     public enum LogLevel {
         DEBUG (0, "DEBUG"),
@@ -78,7 +225,7 @@ public class Main {
     }
 
     public static void log(String format, Object... args) {
-            log(LogLevel.INFO, format, args);
+        log(LogLevel.INFO, format, args);
     }
 
     public static void log(LogLevel level, String format, Object... args) {
@@ -187,10 +334,10 @@ public class Main {
         System.out.println("chess [-option]");
         System.out.println("    -configfile=file            Sets the name of the properties file to load and use");
         System.out.println("    -risk=num                   Risk level.  Sets the percentage of times a move has\n" +
-                           "                                to be fully examined by the AI divided by the number of\n" +
-                           "                                times the extra evaluation found a better move. As the\n" +
-                           "                                move is run more times and continues to be the best move\n" +
-                           "                                this percentage goes down. num: 0-100.  Default: 25");
+                "                                to be fully examined by the AI divided by the number of\n" +
+                "                                times the extra evaluation found a better move. As the\n" +
+                "                                move is run more times and continues to be the best move\n" +
+                "                                this percentage goes down. num: 0-100.  Default: 25");
         System.out.println("                                Higher value mean less tested moves will be accepted.");
         System.out.println("    -log                        Activity and debug info will be written to chess.log");
         System.out.println("    -log=file                   Activity and debug info will be written to specified log file");
@@ -267,278 +414,15 @@ public class Main {
         exit(0);
     }
 
-    public static void bailOnInternalError(String issue) {
-        // somewhere an internal sanity check failed.  Since the calling thread
-        // that will execute this code is quite possibly *not* the main thread
-        // we can't join() the other threads here because we may not be running
-        // as the main parent thread.  So we store away the error, gather the current stack
-        // as strings and store them as well, and do nothing.
-        // Main thread will periodically check the "bailed threads message list" and
-        // if it's not empty it will join() old threads, display the messages in the
-        // bailed thread list, and cleanly exit.
-
-        List<String> msgList = new ArrayList<>();
-        msgList.add("*** " + issue);
-
-        Thread thisThread = Thread.currentThread();
-        StackTraceElement[] stack = thisThread.getStackTrace();
-        for (StackTraceElement elem : stack) {
-            msgList.add(elem.toString());
+    private static BiPredicate<List<String>, Map<String, String>> containsAny = (strList, optMap) -> {
+        for (String key : strList) {
+            if (optMap.containsKey(key)) return true;
         }
-
-        if (bailedStackList == null) {
-            bailedStackList = new ArrayList<>();
-            bailedStackList.add(msgList);
-        }
-
-        if (thisThread == mainThread) {
-            System.out.println("\n");
-            for (List<String> list :bailedStackList) {
-                for (String msg : list) {
-                    log(LogLevel.ERROR, msg);
-                    System.out.println(msg);
-                }
-            }
-            onAppExit();
-        }
-    }
-
-    public static void checkBailedList() {
-        if (bailedStackList != null) {
-            System.out.println("\n");
-            for (List<String> list :bailedStackList) {
-                for (String msg : list) {
-                    log(LogLevel.ERROR, msg);
-                    System.out.println(msg);
-                }
-            }
-            showBoard(liteBoard, null, liteAgent, 0, 0, true);
-
-            Thread thisThread = Thread.currentThread();
-            if (thisThread == mainThread) {
-                System.out.println("\n");
-                for (List<String> list :bailedStackList) {
-                    for (String msg : list) {
-                        log(LogLevel.ERROR, msg);
-                        System.out.println(msg);
-                    }
-                }
-                onAppExit();
-            }
-        }
-    }
-
-    public static void main(String[] args) throws InterruptedException {
-
-        setLogLevel(LogLevel.DEBUG);
-
-        parseCmdline(args);
-
-        config = new ChessConfig(configFile);
-        config.loadConfiguration();
-
-        maxDepth = config.maxDepth;
-        maxSeconds = config.maxSeconds;
-
-        if (options.containsKey("ply")) {
-            maxDepth = Integer.parseInt(options.get("ply"));
-        }
-
-        liteAgent = new LiteMinimax(serialFilename, maxDepth, maxSeconds);
-
-        liteBoard = new LiteBoard();
-        liteBoard.maxRep = config.maxDrawReps;
-
-        SignalHandler sigHandler = sig -> {
-            // handle SIGINT (e.g. user hit ctrl-c)
-
-            checkBailedList();
-
-            onAppExit();
-        };
-
-        try {
-            Signal.handle(new Signal("INT"), sigHandler);
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        }
-
-        if (options.containsKey("test")) {
-            {
-                EngineTuningTests.runTestSuites();
-                System.exit(0);
-            }
-        }
-
-        if (options.containsKey("profwait")) {
-            Thread.sleep(Integer.parseInt(options.get("profwait")) * 1000);
-        }
-
-        if (options.containsKey("throttle")) {
-            liteAgent.setThrottle(Integer.parseInt(options.get("throttle")));
-        }
-
-        playGame(liteAgent);
-
-        onAppExit();
-    }
+        return false;
+    };
 
 
-    private static void playGame(final LiteMinimax liteAgent) throws InterruptedException {
-        for (int n = 0; n < 20; ++n) {
-            System.out.println("\n");
-        }
-
-        String moveDesc = "";
-        long gameStart = System.nanoTime();
-        long moveStart;
-        Move move;
-
-        liteAgent.registerDisplayCallback(s ->
-            showBoard(liteBoard, s + Ansi.clearEOL, liteAgent, 0, gameStart, true)
-        );
-
-        System.out.println();
-        showBoard(liteBoard, null, liteAgent, 0, 0, true);
-
-        moveStart = System.nanoTime();
-        move = getNextPlayersMove(liteBoard, liteAgent, null, moveStart, gameStart);
-
-        int turn = liteBoard.turn;
-        int turns = liteBoard.turns;
-
-        while (move != null) {
-            moveDesc = getMoveDesc(liteBoard, move);
-
-            int ndx = move.getTo();
-            if (!liteBoard.isEmpty(ndx)) {
-                // a piece is being taken.
-                // throw away move maps that had it:
-                liteAgent.cachedMoves.deletePieceTaken(liteBoard.board, ndx);
-            }
-
-            liteBoard.executeMove(move);
-            liteBoard.advanceTurn();
-
-            checkBailedList();
-
-            assert liteBoard.turn != turn : "The '.turn' instance variable on the LiteBoard did not move to the other" +
-                    " player";
-
-            assert liteBoard.turns == (turns + 1) : "Somehow some turns were advanced on the board unexpectedly";
-
-            assert (liteBoard.turns % 2) ==liteBoard.turn : "The 'turn' and 'turns' values are out of sync";
-
-            turn = liteBoard.turn;
-            turns = liteBoard.turns;
-
-            System.out.println();
-            showBoard(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true);
-
-            assert (liteBoard.lastMove != null);
-            int lastMoveToIndex = liteBoard.lastMove.getTo();
-            if (liteBoard.getType(lastMoveToIndex) == LiteBoard.Empty) {
-                bailOnInternalError("The last move did not seem to take effect on the board: " + liteBoard.lastMove);
-            }
-
-            if (liteBoard.numPieces1 == 0) {
-                bailOnInternalError("Current player has no pieces?");
-            }
-
-// WTF? FixMe!
-//            assert liteBoard.getSide(liteBoard.lastMove.getTo()) != LiteUtil.getSide(liteBoard.pieces1[0]) : "Last " +
-//                    "move seems to " +
-//                    "show it's for the wrong side";
-
-            liteAgent.log(liteBoard);
-
-            moveStart = System.nanoTime();
-            move = getNextPlayersMove(liteBoard, liteAgent, moveDesc, moveStart, gameStart);
-        }
-
-        String boardFinal = showBoardImpl(liteBoard, moveDesc, liteAgent, moveStart, gameStart, true, true);
-
-        writeToScreenFile(boardFinal
-                + getGameSummary(liteBoard)
-                + getTotalGameTime(gameStart));
-        System.out.println(getGameSummary(liteBoard) + getTotalGameTime(gameStart));
-    }
-
-    private static Move getNextPlayersMove(final LiteBoard board,
-                                           LiteMinimax liteAgent,
-                                           String moveDesc,
-                                           long moveStart,
-                                           long gameStart) throws InterruptedException {
-        if (config.humanPlayer) {
-            if ((board.turn == Side.White) ^ !config.humanMovesFirst) {
-                return getHumanMove(board);
-            }
-        }
-
-        if (board.kingInCheck((board.turn + 1) % 2)) {
-            log(LogLevel.ERROR, "* Somehow we allowed a move that put the king in check! *");
-            showBoard(board,
-                    "* Somehow we allowed a move that put the king in check! *",
-                    liteAgent, moveStart, gameStart, true);
-            StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-            for (StackTraceElement elem : stack) {
-                log(LogLevel.ERROR, elem.toString());
-            }
-            return null;
-        }
-
-        // The single point where we launch (and own as the parent thread ourselves) the search thread owner, and
-        // it's child threads.  The complimentary join() back together is noted below.
-        Move move = liteAgent.bestMove(board, searchInBackground);
-
-        while (move == null) {
-            showBoard(board, moveDesc, liteAgent, moveStart, gameStart, false);
-
-            checkBailedList();
-
-            Thread.sleep(refreshRate);
-
-            // The single point where we join() with the existing search thread if it is finished
-            boolean searchCompleted = liteAgent.moveSearchIsDone();
-            if (searchCompleted) {
-                // we just join()ed back together with the completed search thread (and it's child threads join()ed to
-                // it before that).
-
-                checkBailedList();
-
-                showBoard(board, moveDesc, liteAgent, moveStart, gameStart, true);
-
-                // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
-                // and then suddenly fly through 8 moves that get decided quickly by the AI faster than we can watch
-                // and follow
-                final long minMoveRate = 750_000_000L;
-                if (System.nanoTime() - moveStart < minMoveRate) {
-                    long delayTime = System.nanoTime() + minMoveRate;
-                    while (System.nanoTime() < delayTime) {
-                        yield();
-                    }
-                }
-            }
-
-            showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
-
-            if (searchCompleted) {
-                move = liteAgent.getBestMove();
-                if (move == null) {
-                    // It is still null even after saying the search is complete so this is the end of the game.  Remove
-                    // the best move value from the agent so it doesn't get highlighted and re-display the final game board
-                    liteAgent.best = null;
-                    showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
-                    break;
-                }
-            }
-        }
-        return move;
-    }
-
-
-
-//    private static final String[] charSetAscii = {"   "," p "," n "," b "," r "," q "," k "};
+    //    private static final String[] charSetAscii = {"   "," p "," n "," b "," r "," q "," k "};
     private static final String[] charSetUnicodeWhite = {"   ", " ♙ ", " ♞ ", " ♝ ", " ♜ ", " ♛ ", " ♚ "};
 
     private static void writeToScreenFile(String output) {
@@ -569,25 +453,12 @@ public class Main {
         }
     }
 
-    // output implementation for use with a LiteBoard and a LiteMinimax agent
-//    static int lastMoveSideLastTime = Side.Black;
-//    static int turns = 1;
 
     private static String showBoardImpl(final LiteBoard board, final String moveDesc, final LiteMinimax agent,
                                    long moveStart, long gameStart, boolean forFile, boolean searchDone) {
 
         // The screen row to begin displaying on
         int topRow = 1;
-
-//        if (turns != board.turns) {
-//            // we've advanced to the next move
-//            assert board.turns == (turns + 1) : "total number of turns in the board isn't right";
-//            if (board.getSide(board.lastMove.getTo()) == board.turn) {
-//                assert false : "The side of the last move is not the right color";
-//            }
-//            turns = board.turns;
-//            lastMoveSideLastTime = board.getSide(board.lastMove.getTo());
-//        }
 
         StringWriter writer = new StringWriter();
 

@@ -227,168 +227,6 @@ public class LiteBoard {
         int a = 1;
     }
 
-//    public static void moveGenTest() {
-//        LiteBoard test = new LiteBoard();
-//        LinkedHashMap<String, List<Double>> results = new LinkedHashMap<>();
-//
-//        List<String> types = new ArrayList<>(Arrays.asList("Pawn", "Rook", "Knight", "Bishop", "Queen", "King"));
-//
-//        UnaryOperator<LiteBoard> pawnSetup = (s) -> {
-//            // set up our pawn with two captures waiting, anso a push and double push
-//            s.board[3 + 3 * 8] = LiteUtil.newSpot(Pawn, Side.White, false, false);
-//            s.board[2 + 2 * 8] = LiteUtil.newSpot(Pawn, Side.Black, true, false);
-//            s.board[4 + 2 * 8] = LiteUtil.newSpot(Pawn, Side.Black, true, false);
-//
-//            // Also set up En passant capture on the left
-//            s.board[2 + 3 * 8] = LiteUtil.newSpot(Pawn, Side.Black, true, false);
-//
-//            s.lastMove = new Move(2, 1, 2, 3, 0);
-//
-//            // Also set up En passant capture on the right
-//            s.board[4 + 3 * 8] = LiteUtil.newSpot(Pawn, Side.Black, true, false);
-//            s.lastMove = new Move(4, 1, 4, 3, 0);
-//
-//            return s;
-//        };
-//        UnaryOperator<LiteBoard> genericSetup = (s) -> {
-//            s.board[3 + 3 * 8] = LiteUtil.newSpot(Rook, Side.Black, true, false);
-//            return s;
-//        };
-//        UnaryOperator<LiteBoard> kingSetup1 = (s) -> {
-//            // place an unused king king
-//            s.board[0 + 0 * 8] = LiteUtil.newSpot(LiteUtil.King, Side.Black, true, false);
-//
-//            // place a king
-//            s.board[3 + 3 * 8] = LiteUtil.newSpot(LiteUtil.King, Side.White, true, false);
-//
-//            // now pin the row above with a rook:
-//            s.board[0 + 2 * 8] = LiteUtil.newSpot(LiteUtil.Rook, Side.Black, true, false);
-//
-//            // now pin the row below with a rook:
-//            s.board[0 + 4 * 8] = LiteUtil.newSpot(LiteUtil.Rook, Side.Black, true, false);
-//
-//            // now pin the column to the left with a queen:
-//            s.board[2 + 7 * 8] = LiteUtil.newSpot(LiteUtil.Queen, Side.Black, true, false);
-//
-//            s.turn = Side.White;
-//            s.generateMoveLists();
-//            s.numMoves1 = 0;
-//            s.turn = Side.Black;
-//
-//            // only choice should be 3,3 -> 4,3
-//
-//            return s;
-//        };
-//
-////        results.put(types.get(0), runMoveGenTest(test, pawnSetup, test::getPawnMoves));
-//
-//        // reset board for tests on other piece types
-//        test = new LiteBoard();
-//
-////        results.put(types.get(1), runMoveGenTest(test, genericSetup, test::getRookMoves));
-////        results.put(types.get(2), runMoveGenTest(test, genericSetup, test::getKnightMoves));
-////        results.put(types.get(3), runMoveGenTest(test, genericSetup, test::getBishopMoves));
-////        results.put(types.get(4), runMoveGenTest(test, genericSetup, test::getQueenMoves));
-//
-//
-//        test = new LiteBoard();
-//        results.put(types.get(5), runMoveGenTest(test, kingSetup1, test::getKingMoves));
-//
-//
-//        String lbl = "          TotTime    Moves    Moves/s";
-//        String fmt = "%8s  %7.2f  %7.2f  %7.2f  \n";
-//
-//        List<Pair<String, List<Double>>> data = new ArrayList<>(
-//                Arrays.asList(
-//                        new Pair<>(types.get(0), results.get(types.get(0))),
-//                        new Pair<>(types.get(1), results.get(types.get(1))),
-//                        new Pair<>(types.get(2), results.get(types.get(2))),
-//                        new Pair<>(types.get(3), results.get(types.get(3))),
-//                        new Pair<>(types.get(4), results.get(types.get(4))),
-//                        new Pair<>(types.get(5), results.get(types.get(5))))
-//        );
-//
-//        Comparator<Pair<String, List<Double>>> byTime = new Comparator<Pair<String, List<Double>>>() {
-//            @Override
-//            public int compare(Pair<String, List<Double>> lhs, Pair<String, List<Double>> rhs) {
-//                // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
-//                return lhs.getValue().get(0) > rhs.getValue().get(0) ? -1 : (lhs.getValue().get(0) < rhs.getValue().get(0)) ? 1 : 0;
-//            }
-//        };
-//
-//        Comparator<Pair<String, List<Double>>> byMove = new Comparator<Pair<String, List<Double>>>() {
-//            @Override
-//            public int compare(Pair<String, List<Double>> lhs, Pair<String, List<Double>> rhs) {
-//                // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
-//                return lhs.getValue().get(1) > rhs.getValue().get(1) ? -1 : (lhs.getValue().get(1) < rhs.getValue().get(1)) ? 1 : 0;
-//            }
-//        };
-//
-//        Comparator<Pair<String, List<Double>>> byMpS = new Comparator<Pair<String, List<Double>>>() {
-//            @Override
-//            public int compare(Pair<String, List<Double>> lhs, Pair<String, List<Double>> rhs) {
-//                // -1 - less than, 1 - greater than, 0 - equal, all inversed for descending
-//                if (lhs.getValue() == null || rhs.getValue() == null)
-//                    return 0;
-//
-//                return lhs.getValue().get(2) > rhs.getValue().get(2) ? -1 : (lhs.getValue().get(2) < rhs.getValue().get(2)) ? 1 : 0;
-//            }
-//        };
-//
-//        System.out.println();
-//        System.out.println();
-//
-//        Collections.sort(data, byMpS);
-//
-//        System.out.println(lbl);
-//        for (Pair<String, List<Double>> line : data) {
-//            if (line.getValue() == null)
-//                continue;
-//            System.out.printf(fmt, line.getKey(), line.getValue().get(0), line.getValue().get(1), line.getValue().get(2));
-//        }
-//        System.out.println();
-//        System.out.println();
-//
-//        dumpBoard(test);
-//        List<Move> moves = test.getMoves(Side.White);
-//        for (Move move :moves) {
-//            System.out.print(move.toString());
-//            for (Move o : test.moves2) {
-//                if (o.getToCol() == move.getToCol() && o.getToRow() == move.getToRow())
-//                    System.out.print("*");
-//            }
-//
-//
-//            System.out.println();
-//        }
-//    }
-
-//    private static List<Double> runMoveGenTest(LiteBoard board, UnaryOperator<LiteBoard>setup,
-//                                               BiFunction<Integer, Integer, List<Move>> moveGen) {
-//        int RESOLUTION = 1_000_000;
-////        int PASSES = 5_000_000;
-//        int PASSES = 1;
-//
-////        long totalTime = (System.nanoTime() - startTime) / RESOLUTION;
-//        long totalTime = 0;
-//
-//        List<Move> moves;
-//        List<Move> lastList = null;
-//        for (int i = 0; i < PASSES; i++) {
-//            // call the test setup:
-//            setup.apply(board);
-//
-//            long startTime = System.nanoTime();
-//            moves = moveGen.apply(3, 3);
-//            totalTime += System.nanoTime() - startTime;
-//            lastList = moves;
-//        }
-//        totalTime /= RESOLUTION;
-//        double movesPerSec = totalTime / (double) lastList.size();
-//
-//        return new ArrayList<>(Arrays.asList((double) totalTime, (double) lastList.size(), movesPerSec));
-//    }
-
     public static void dumpBoard(LiteBoard board) {
         String pieces = " pnbrqk";
         for (int i = 0; i < BOARD_SIZE; i++) {
@@ -500,29 +338,6 @@ public class LiteBoard {
         int fi = move.getFrom();
         int ti = move.getTo();
 
-        // do some quick debug/sanity checks:
-        if (move.equals(lastMove)) {
-            String dbgMsg = String.format("say wha?! move seems to be the same move we last made: %s", move);
-            Main.log(Main.LogLevel.DEBUG, dbgMsg);
-            Main.bailOnInternalError(dbgMsg);
-        }
-
-        if (getType(fi) == Empty) {
-            String dbgMsg = String.format("move seems to start at an empty spot: %s", move);
-            Main.log(Main.LogLevel.DEBUG, dbgMsg);
-            Main.bailOnInternalError(dbgMsg);
-        }
-
-        if (!isEmpty(ti)) {
-            int sideToMove = getSide(fi);
-            int sideAtDest = getSide(ti);
-            if (sideToMove == sideAtDest) {
-                String dbgMsg = String.format("move seems to capture piece of its own side: %s", move);
-                Main.log(Main.LogLevel.DEBUG, dbgMsg);
-                Main.bailOnInternalError(dbgMsg);
-            }
-        }
-
         // special check for en passant
         int type = getType(fi);
         int toType = getType(ti);
@@ -608,11 +423,11 @@ public class LiteBoard {
     public List<Move> getMovesSorted(final int side) {
         List<Move> moves = getMoves(side, true);
         Comparator<Move> sortByValue;
-//        if (side == Side.Black) {
-//            sortByValue = Comparator.comparing(Move::getValue);
-//        } else {
+        if (side == Side.Black) {
+            sortByValue = Comparator.comparing(Move::getValue);
+        } else {
             sortByValue = Comparator.comparing(Move::getValue).reversed();
-//        }
+        }
         moves.sort(sortByValue);
         return moves;
     }
@@ -703,11 +518,6 @@ public class LiteBoard {
         int fi = fromCol + fromRow * 8;
         int ti = toCol + toRow * 8;
 
-// I don't *think* any pieces ask to move from anywhere but their spot
-//        if (isEmpty(fi)) {
-//            return;
-//        }
-
         int value = 0;
         int pieceType = getType(fi);
         int pieceSide = getSide(fi);
@@ -748,9 +558,6 @@ public class LiteBoard {
                 }
             }
         }
-
-//        if (pieceSide == Side.Black)
-//            value *= -1;
 
         moves.add(new Move(fromCol, fromRow, toCol, toRow, value));
     }
@@ -857,32 +664,6 @@ public class LiteBoard {
             if (!addSlider(moves, col, row, x, y))
                 break;
         }
-
-//        for (int x = col - 1; x >= 0; --x) {
-//            if (!isEmpty(x + row * 8))
-//                if (getSide(col + row * 8) == getSide(x + row * 8))
-//                    break;
-//            addMoveIfValid(moves, col, row, x, row);
-//        }
-//        for (int x = col + 1; x <= 7; ++x) {
-//            if (!isEmpty(x + row * 8))
-//                if (getSide(col + row * 8) == getSide(x + row * 8))
-//                    break;
-//            addMoveIfValid(moves, col, row, x, row);
-//        }
-//        for (int y = row - 1; y >= 0; --y) {
-//            if (!isEmpty(col + y * 8))
-//                if (getSide(col + row * 8) == getSide(col + y * 8))
-//                    break;
-//            addMoveIfValid(moves, col, row, col, y);
-//        }
-//        for (int y = row + 1; y <= 7; ++y) {
-//            if (!isEmpty(col + y * 8))
-//                if (getSide(col + row * 8) == getSide(col + y * 8))
-//                    break;
-//            addMoveIfValid(moves, col, row, col, y);
-//        }
-//
         return moves;
     }
 
