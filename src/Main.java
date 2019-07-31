@@ -47,9 +47,7 @@ public class Main {
         setLogLevel(LogLevel.DEBUG);
 
         // our signal handler - handle SIGINT (e.g. user hit ctrl-c) etc
-        SignalHandler sigHandler = sig -> {
-            onAppExit();
-        };
+        SignalHandler sigHandler = sig -> onAppExit();
         // Register our signal handler for the interrupt signal (SIGINT)
         Signal.handle(new Signal("INT"), sigHandler);
 
@@ -167,17 +165,6 @@ public class Main {
                 // we just join()ed back together with the completed search thread (and it's child threads join()ed to
                 // it before that).
                 showBoard(board, moveDesc, liteAgent, moveStart, gameStart, true);
-
-                // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
-                // and then suddenly fly through 8 moves that get decided quickly by the AI faster than we can watch
-                // and follow
-                final long minMoveRate = 750_000_000L;
-                if (System.nanoTime() - moveStart < minMoveRate) {
-                    long delayTime = System.nanoTime() + minMoveRate;
-                    while (System.nanoTime() < delayTime) {
-                        yield();
-                    }
-                }
             }
 
             showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
@@ -193,6 +180,18 @@ public class Main {
                 }
             }
         }
+
+        // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
+        // and then suddenly fly through 8 moves that get decided quickly by the AI faster than we can watch
+        // and follow
+        final long minMoveRate = 750_000_000L;
+        if (System.nanoTime() - moveStart < minMoveRate) {
+            long delayTime = System.nanoTime() + minMoveRate;
+            while (System.nanoTime() < delayTime) {
+                yield();
+            }
+        }
+
         return move;
     }
 

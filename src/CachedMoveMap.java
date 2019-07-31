@@ -220,40 +220,13 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
 
         // See if we have this board state
         if (containsKey(key) && get(key).containsKey(maximize)) {
-
-            // We do.  Get the maximize/minimize Move associated with it (if any)
-            ConcurrentMap<Boolean, BestMove> bestMap = get(key);
-            if (bestMap.containsKey(maximize)) {
-
-                // We have a move stored away.  Do a few sanity checks
-                // on the move before we suggest it
-                BestMove bm = bestMap.get(maximize);
-
-                // bad BestMove object
-                assert bm != null : "Ooops";
-
-                // bad move stored inside
-                assert bm.move != null : "Ooops";
-
-                // get the 'from' spot of this move
-                int fi = bm.move.getFrom();
-
-                // make sure it points within a board
-                assert ((fi >= 0) && (fi <= 63)) : "Oooops";
-
-                // Make sure there is a still a piece on the board in
-                // the spot this move points to.
-                assert !LiteUtil.isEmpty(b[fi]);
-
-                addNumMovesExamined(bm.movesExamined);
-
-                synchronized (statisticsLock) {
-                    numExaminationsSaved += bm.movesExamined;
-                    numCacheHits++;
-                }
-
-                return bm;
+            BestMove bm = get(key).get(maximize);
+            addNumMovesExamined(bm.movesExamined);
+            synchronized (statisticsLock) {
+                numExaminationsSaved += bm.movesExamined;
+                numCacheHits++;
             }
+            return bm;
         }
 
         synchronized (statisticsLock) {

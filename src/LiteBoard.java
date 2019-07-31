@@ -422,12 +422,7 @@ public class LiteBoard {
 
     public List<Move> getMovesSorted(final int side) {
         List<Move> moves = getMoves(side, true);
-        Comparator<Move> sortByValue;
-        if (side == Side.Black) {
-            sortByValue = Comparator.comparing(Move::getValue);
-        } else {
-            sortByValue = Comparator.comparing(Move::getValue).reversed();
-        }
+        Comparator<Move> sortByValue = Comparator.comparing(Move::getValue).reversed();
         moves.sort(sortByValue);
         return moves;
     }

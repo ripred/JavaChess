@@ -443,6 +443,11 @@ public class LiteMinimax implements Serializable {
             return null;
         }
 
+        BestMove checkCache = cachedMoves.lookupBestMove(board.board, maximize);
+        if (checkCache != null && checkCache.move != null) {
+            return checkCache.move;
+        }
+
         // create a map of the pieces on the board by side, and then by type, and then their locations
         SidePieceMap piecesOurs = new SidePieceMap();
         SidePieceMap piecesTheirs = new SidePieceMap();
