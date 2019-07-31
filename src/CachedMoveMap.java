@@ -192,6 +192,7 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
                 best.move = move;
                 best.move.setValue(best.value);
                 best.movesExamined = movesExamined + alreadyExamined;
+                get(key).put(maximize, best);
                 synchronized (statisticsLock) {
                     numMovesUpdated++;
                 }
@@ -218,7 +219,7 @@ public class CachedMoveMap extends ConcurrentHashMap<String, ConcurrentHashMap<B
         String key = getBoardKey(b);
 
         // See if we have this board state
-        if (containsKey(key) && get(key).contains(maximize)) {
+        if (containsKey(key) && get(key).containsKey(maximize)) {
 
             // We do.  Get the maximize/minimize Move associated with it (if any)
             ConcurrentMap<Boolean, BestMove> bestMap = get(key);
