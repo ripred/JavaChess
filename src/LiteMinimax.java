@@ -74,7 +74,6 @@ public class LiteMinimax implements Serializable {
         this.best = new BestMove(false);
         this.cachedMoves = new CachedMoveMap();
         this.gameTime = System.nanoTime();
-        this.acceptableRiskLevel = 0.25f;
         this.serDeserFilename = filename;
         this.maxSeconds = maxSeconds;
         this.currentSearch = null;
