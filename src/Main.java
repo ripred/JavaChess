@@ -164,10 +164,7 @@ public class Main {
             if (searchCompleted) {
                 // we just join()ed back together with the completed search thread (and it's child threads join()ed to
                 // it before that).
-                showBoard(board, moveDesc, liteAgent, moveStart, gameStart, true);
             }
-
-            showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
 
             if (searchCompleted) {
                 move = liteAgent.getBestMove();
@@ -178,6 +175,8 @@ public class Main {
                     showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
                     break;
                 }
+            } else {
+                showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
             }
         }
 

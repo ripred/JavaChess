@@ -433,6 +433,8 @@ public class LiteMinimax implements Serializable {
             // We have only one move so nothing the other side can do in response will change
             // what move we make so just return it now and save the recursive depth cost.
             addNumMovesExamined(1);
+            best.move = board.moves1[0];
+            best.value = board.moves1[0].getValue();
             return board.moves1[0];
         }
 
@@ -440,11 +442,6 @@ public class LiteMinimax implements Serializable {
             String playerName = (side == Side.Black) ? Main.config.player2 : Main.config.player1;
             Main.log(Main.LogLevel.DEBUG, "bestMove(...) called and no moves are available for ", playerName);
             return null;
-        }
-
-        BestMove checkCache = cachedMoves.lookupBestMove(board.board, maximize);
-        if (checkCache != null && checkCache.move != null) {
-            return checkCache.move;
         }
 
         // create a map of the pieces on the board by side, and then by type, and then their locations
@@ -525,10 +522,6 @@ public class LiteMinimax implements Serializable {
                 best.value = lookAheadVal;
                 best.move = move;
                 best.move.setValue(best.value);
-                cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
-            }
-
-            if (best.move != null) {
                 cachedMoves.addMoveValue(board.board, maximize, best.move, best.value, best.movesExamined);
             }
 
