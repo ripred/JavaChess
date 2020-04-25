@@ -3,7 +3,6 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 
 /**
  * EN class reads and writes FEN notation to and from a LiteBoard state
@@ -13,7 +12,7 @@ public class FEN {
 
     public static void decode(LiteBoard board, String in) {
         for (int ndx=0; ndx < LiteBoard.BOARD_SIZE; ndx++) {
-            board.board[ndx] = LiteUtil.newSpot(LiteBoard.Empty, 0, false, false);
+            board.board[ndx] = LiteUtil.makeSpot(LiteBoard.Empty, 0, false, false);
         }
 
         int ndx = 0;
@@ -23,40 +22,40 @@ public class FEN {
             c = in.charAt(pos++);
             switch (c) {
                 case 'p':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Pawn, Side.Black, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Pawn, Side.Black, true, false);
                     break;
                 case 'n':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Knight, Side.Black, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Knight, Side.Black, true, false);
                     break;
                 case 'b':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Bishop, Side.Black, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Bishop, Side.Black, true, false);
                     break;
                 case 'r':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Rook, Side.Black, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Rook, Side.Black, true, false);
                     break;
                 case 'q':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Queen, Side.Black, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Queen, Side.Black, true, false);
                     break;
                 case 'k':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.King, Side.Black, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.King, Side.Black, true, false);
                     break;
                 case 'P':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Pawn, Side.White, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Pawn, Side.White, true, false);
                     break;
                 case 'N':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Knight, Side.White, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Knight, Side.White, true, false);
                     break;
                 case 'B':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Bishop, Side.White, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Bishop, Side.White, true, false);
                     break;
                 case 'R':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Rook, Side.White, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Rook, Side.White, true, false);
                     break;
                 case 'Q':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Queen, Side.White, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Queen, Side.White, true, false);
                     break;
                 case 'K':
-                    board.board[ndx++] = LiteUtil.newSpot(LiteBoard.King, Side.White, true, false);
+                    board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.King, Side.White, true, false);
                     break;
                 case '/':
                     assert(ndx % 8 == 0) : "Oops?\n";
@@ -66,7 +65,7 @@ public class FEN {
                         String s = "" + c;
                         int empty = Integer.valueOf(s);
                         while (empty-- > 0) {
-                            board.board[ndx++] = LiteUtil.newSpot(LiteBoard.Empty, 0, false, false);
+                            board.board[ndx++] = LiteUtil.makeSpot(LiteBoard.Empty, 0, false, false);
                         }
                     }
                     break;

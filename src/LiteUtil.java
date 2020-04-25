@@ -24,7 +24,7 @@ public class LiteUtil {
     final private static byte  King    = (byte) 6;
     final private static byte  Marker  = (byte) 7;
 
-    public static byte newSpot(int type, int side, boolean moved, boolean inCheck) {
+    public static byte makeSpot(int type, int side, boolean moved, boolean inCheck) {
         byte b = 0;
         b = setType(b, type);
         b = setSide(b, side);
@@ -47,7 +47,7 @@ public class LiteUtil {
     }
 
     public static byte getSide(int b) {
-        return (byte) ((Side & b) >>> 4);
+        return (byte) ((Side & b) >> 4);
     }
 
     public static boolean hasMoved(int b) {

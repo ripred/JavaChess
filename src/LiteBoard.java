@@ -189,39 +189,39 @@ public class LiteBoard {
         blkKingLoc = 4 + 0 * 8;
         whtKingLoc = 4 + 7 * 8;
 
-        board[0 + 0 * 8] = LiteUtil.newSpot(LiteBoard.Rook,     Side.Black, false, false);
-        board[1 + 0 * 8] = LiteUtil.newSpot(LiteBoard.Knight,   Side.Black, false, false);
-        board[2 + 0 * 8] = LiteUtil.newSpot(LiteBoard.Bishop,   Side.Black, false, false);
-        board[3 + 0 * 8] = LiteUtil.newSpot(LiteBoard.Queen,    Side.Black, false, false);
-        board[4 + 0 * 8] = LiteUtil.newSpot(LiteBoard.King,     Side.Black, false, false);
-        board[5 + 0 * 8] = LiteUtil.newSpot(LiteBoard.Bishop,   Side.Black, false, false);
-        board[6 + 0 * 8] = LiteUtil.newSpot(LiteBoard.Knight,   Side.Black, false, false);
-        board[7 + 0 * 8] = LiteUtil.newSpot(LiteBoard.Rook,     Side.Black, false, false);
-        board[0 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
-        board[1 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
-        board[2 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
-        board[3 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
-        board[4 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
-        board[5 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
-        board[6 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
-        board[7 + 1 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[0 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.Rook,     Side.Black, false, false);
+        board[1 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.Knight,   Side.Black, false, false);
+        board[2 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.Bishop,   Side.Black, false, false);
+        board[3 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.Queen,    Side.Black, false, false);
+        board[4 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.King,     Side.Black, false, false);
+        board[5 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.Bishop,   Side.Black, false, false);
+        board[6 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.Knight,   Side.Black, false, false);
+        board[7 + 0 * 8] = LiteUtil.makeSpot(LiteBoard.Rook,     Side.Black, false, false);
+        board[0 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[1 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[2 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[3 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[4 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[5 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[6 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
+        board[7 + 1 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.Black, false, false);
 
-        board[0 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[1 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[2 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[3 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[4 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[5 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[6 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[7 + 6 * 8] = LiteUtil.newSpot(LiteBoard.Pawn,     Side.White, false, false);
-        board[0 + 7 * 8] = LiteUtil.newSpot(LiteBoard.Rook,     Side.White, false, false);
-        board[1 + 7 * 8] = LiteUtil.newSpot(LiteBoard.Knight,   Side.White, false, false);
-        board[2 + 7 * 8] = LiteUtil.newSpot(LiteBoard.Bishop,   Side.White, false, false);
-        board[3 + 7 * 8] = LiteUtil.newSpot(LiteBoard.Queen,    Side.White, false, false);
-        board[4 + 7 * 8] = LiteUtil.newSpot(LiteBoard.King,     Side.White, false, false);
-        board[5 + 7 * 8] = LiteUtil.newSpot(LiteBoard.Bishop,   Side.White, false, false);
-        board[6 + 7 * 8] = LiteUtil.newSpot(LiteBoard.Knight,   Side.White, false, false);
-        board[7 + 7 * 8] = LiteUtil.newSpot(LiteBoard.Rook,     Side.White, false, false);
+        board[0 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[1 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[2 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[3 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[4 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[5 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[6 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[7 + 6 * 8] = LiteUtil.makeSpot(LiteBoard.Pawn,     Side.White, false, false);
+        board[0 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.Rook,     Side.White, false, false);
+        board[1 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.Knight,   Side.White, false, false);
+        board[2 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.Bishop,   Side.White, false, false);
+        board[3 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.Queen,    Side.White, false, false);
+        board[4 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.King,     Side.White, false, false);
+        board[5 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.Bishop,   Side.White, false, false);
+        board[6 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.Knight,   Side.White, false, false);
+        board[7 + 7 * 8] = LiteUtil.makeSpot(LiteBoard.Rook,     Side.White, false, false);
 
         generateMoveLists();
         int a = 1;
@@ -346,7 +346,7 @@ public class LiteBoard {
                 taken2[numTaken2++] = (byte) Pawn;
             else
                 taken1[numTaken1++] = (byte) Pawn;
-            board[tx + fy * 8] = LiteUtil.newSpot(Empty, Side.Black, false, false);
+            board[tx + fy * 8] = LiteUtil.makeSpot(Empty, Side.Black, false, false);
         } else {
             if (toType != Empty) {
                 if (turn != Side.Black)
@@ -357,7 +357,7 @@ public class LiteBoard {
         }
 
         board[ti] = board[fi];
-        board[fi] = LiteUtil.newSpot(Empty, Side.Black, false, false);
+        board[fi] = LiteUtil.makeSpot(Empty, Side.Black, false, false);
         setMoved(ti, true);
 
         // See if this is a Castling move:
@@ -375,7 +375,7 @@ public class LiteBoard {
                 }
                 board[rti] = board[rfi];
                 setMoved(rti, true);
-                board[rfi] = LiteUtil.newSpot(Empty, Side.Black, false, false);
+                board[rfi] = LiteUtil.makeSpot(Empty, Side.Black, false, false);
             }
 
             if (getSide(fi) == Side.Black)
