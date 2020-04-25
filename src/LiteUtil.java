@@ -34,16 +34,16 @@ public class LiteUtil {
     }
 
 
+    public static byte getType(int b) {
+        return (byte) (Type & b);
+    }
+
     public static boolean isEmpty(int b) {
         return getType(b) == Empty;
     }
 
     public static int getValue(int b) {
         return values[getType(b)];
-    }
-
-    public static byte getType(int b) {
-        return (byte) (Type & b);
     }
 
     public static byte getSide(int b) {
