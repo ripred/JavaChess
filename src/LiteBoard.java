@@ -356,6 +356,7 @@ public class LiteBoard {
             }
         }
 
+        int fromSide = getSide(fi);
         board[ti] = board[fi];
         board[fi] = LiteUtil.makeSpot(Empty, Side.Black, false, false);
         setMoved(ti, true);
@@ -378,7 +379,7 @@ public class LiteBoard {
                 board[rfi] = LiteUtil.makeSpot(Empty, Side.Black, false, false);
             }
 
-            if (getSide(fi) == Side.Black)
+            if (fromSide == Side.Black)
                 blkKingLoc = ti;
             else
                 whtKingLoc = ti;
