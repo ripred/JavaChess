@@ -5,9 +5,9 @@ import java.util.List;
 public class LiteEval {
 
     // Filters to decide what to include in our evaluation
-    public static int MATERIAL = 0x01;
-    public static int CENTER   = 0x02;
-    public static int MOBILE   = 0x04;
+    public static int MATERIAL = 0x01;  // favor moves that leave more pieces for our side aftewards
+    public static int CENTER   = 0x02;  // favor moves that occupy the center of the board
+    public static int MOBILE   = 0x04;  // favor moves that leave us the most moves afterwards
 
 
     // a material values plugin:
