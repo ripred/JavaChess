@@ -2,6 +2,10 @@
 import java.util.ArrayList;
 import java.util.List;
 
+// Class to implement high-performance map/reduce algorithm using parallel processing and Java Streams
+// Used for high speed game score evaluation of millions of board states
+// (c) 2019 Trent M. Wyatt
+
 public class LiteEval {
 
     // Filters to decide what to include in our evaluation
