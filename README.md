@@ -3,7 +3,7 @@
 * Either side can be human or a multi-threaded AI instance using the Minimax algorithm with alpha-beta pruning. 
 * Uses map/reduce and streaming techniques to speed up the parallelism during board valuations since those happen millions of times for every move on every thread. 
 * Includes high-speed mapping and caching of all moves seen by all threads in order to gain short-circuit efficiency on parallel threads evaluating the same board state for which the best move to be made has already been determined earlier by the popularity winner of previous evaluation threads that all ran to ply (or quiescent search) depth and were repeatedly determined to be the best moves. The required percentage of repeated wins as "best move" is configurable to control the required reliability of the cached best moves answers.
-* Includes end game recognition and map/reduce specialization. 
+* Includes end game recognition and several map/reduce specialization approaches including walking the King into a corner if possible and intentionally advancing and sacrificing pawns if necessary in order to allow other pieces to make higher value moves or unblock pieces when it is recognized that they cannot advance.
 * Includes quiescent search support. 
 * Fully configurable properties including: ply depth, thread pool size, optional AI time limit, all colors, and more.
 
