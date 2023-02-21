@@ -1,5 +1,4 @@
 # JavaChess
-===
 * 24-bit ANSI colored, console-based chess using Java.  
 * Optional multi-threaded AI using the Minimax algorithm with alpha-beta pruning. 
 * Uses map/reduce and streaming techniques to speed up the parallelism during board valuations since those happen millions of times for every move on every thread. 
