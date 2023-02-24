@@ -4,6 +4,7 @@
 * Uses map/reduce and streaming techniques to speed up the parallelism during board valuations since those happen after every move millions of times on every thread. 
 * Includes high-speed mapping and caching of all moves seen by all threads in order to gain short-circuit efficiency on parallel threads evaluating the same board state for which the best move to be made has already been determined earlier by the popularity winner of previous evaluation threads that all ran to ply (or quiescent search) depth and were repeatedly determined to be the best moves. The required percentage of repeated wins as "best move" is configurable to control the required reliability of the cached best moves answers.
 * Includes end game recognition and several map/reduce specialization approaches including walking the King into a corner if possible and intentionally advancing and sacrificing pawns if necessary in order to allow other pieces to make higher value moves or unblock pieces when it is recognized that they cannot advance.
+* configurable choice of how many of the available physical processor cores to use
 * Includes quiescent search support. 
 * Full support for reading and writing FEN chess notation strings and full game replay.
 * Fully configurable properties text file including: ply depth, thread pool size, optional AI time limit, all colors, and more.
