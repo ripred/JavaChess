@@ -88,7 +88,6 @@ public class Main {
         onAppExit();
     }
 
-
     private static void playGame(final LiteMinimax liteAgent) throws InterruptedException {
         for (int n = 0; n < 20; ++n) {
             System.out.println("\n");
@@ -99,9 +98,7 @@ public class Main {
         long moveStart;
         Move move;
 
-        liteAgent.registerDisplayCallback(s ->
-            showBoard(liteBoard, s + Ansi.clearEOL, liteAgent, 0, gameStart, true)
-        );
+        liteAgent.registerDisplayCallback(s -> showBoard(liteBoard, s + Ansi.clearEOL, liteAgent, 0, gameStart, true));
 
         System.out.println();
         showBoard(liteBoard, null, liteAgent, 0, 0, true);
@@ -139,38 +136,42 @@ public class Main {
         System.out.println(getGameSummary(liteBoard) + getTotalGameTime(gameStart));
     }
 
-
     private static Move getNextPlayersMove(final LiteBoard board,
-                                           LiteMinimax liteAgent,
-                                           String moveDesc,
-                                           long moveStart,
-                                           long gameStart) throws InterruptedException {
+            LiteMinimax liteAgent,
+            String moveDesc,
+            long moveStart,
+            long gameStart) throws InterruptedException {
         if (config.humanPlayer) {
             if ((board.turn == Side.White) ^ !config.humanMovesFirst) {
                 return getHumanMove(board);
             }
         }
 
-        // The single point where we launch (and own as the parent thread ourselves) the search thread owner, and
-        // it's child threads.  The complimentary join() back together is noted below.
+        // The single point where we launch (and own as the parent thread ourselves) the
+        // search thread owner, and
+        // it's child threads. The complimentary join() back together is noted below.
         Move move = liteAgent.bestMove(board, searchInBackground);
 
         while (move == null) {
             showBoard(board, moveDesc, liteAgent, moveStart, gameStart, false);
             Thread.sleep(refreshRate);
 
-            // The single point where we join() with the existing search thread if it is finished
+            // The single point where we join() with the existing search thread if it is
+            // finished
             boolean searchCompleted = liteAgent.moveSearchIsDone();
             if (searchCompleted) {
-                // we just join()ed back together with the completed search thread (and it's child threads join()ed to
+                // we just join()ed back together with the completed search thread (and it's
+                // child threads join()ed to
                 // it before that).
             }
 
             if (searchCompleted) {
                 move = liteAgent.getBestMove();
                 if (move == null) {
-                    // It is still null even after saying the search is complete so this is the end of the game.  Remove
-                    // the best move value from the agent so it doesn't get highlighted and re-display the final game board
+                    // It is still null even after saying the search is complete so this is the end
+                    // of the game. Remove
+                    // the best move value from the agent so it doesn't get highlighted and
+                    // re-display the final game board
                     liteAgent.best = null;
                     showBoard(board, moveDesc, liteAgent, moveStart, gameStart, searchCompleted);
                     break;
@@ -180,26 +181,27 @@ public class Main {
             }
         }
 
-        // put a governor on how fast moves can fly through, so we don't do a move every 5 seconds
-        // and then suddenly fly through 8 moves that get decided quickly by the AI faster than we can watch
+        // put a governor on how fast moves can fly through, so we don't do a move every
+        // 5 seconds
+        // and then suddenly fly through 8 moves that get decided quickly by the AI
+        // faster than we can watch
         // and follow
         final long minMoveRate = 750_000_000L;
         if (System.nanoTime() - moveStart < minMoveRate) {
             long delayTime = System.nanoTime() + minMoveRate;
             while (System.nanoTime() < delayTime) {
-                yield();
+                java.lang.Thread.yield();
             }
         }
 
         return move;
     }
 
-
     public enum LogLevel {
-        DEBUG (0, "DEBUG"),
-        INFO  (1, "INFO"),
-        WARN  (2, "WARN"),
-        ERROR (3, "ERROR");
+        DEBUG(0, "DEBUG"),
+        INFO(1, "INFO"),
+        WARN(2, "WARN"),
+        ERROR(3, "ERROR");
 
         public int number;
         public String name;
@@ -227,7 +229,8 @@ public class Main {
     }
 
     public static void log(LogLevel level, String format, Object... args) {
-        if (!options.containsKey("log")) return;
+        if (!options.containsKey("log"))
+            return;
 
         if (level.number < logLevel.number)
             return;
@@ -240,14 +243,15 @@ public class Main {
 
                 logWriter = new BufferedWriter(new FileWriter(logFile));
             } catch (IOException e1) {
-//              e1.printStackTrace();
+                // e1.printStackTrace();
                 try {
                     logWriter.close();
                 } catch (IOException e2) {
                     e2.printStackTrace();
                 }
             }
-            if (logWriter == null) return;
+            if (logWriter == null)
+                return;
         }
 
         String output = createLogEntry(level, format, args);
@@ -264,8 +268,7 @@ public class Main {
         String formatDateTime;
         {
             LocalDateTime now = LocalDateTime.now();
-            DateTimeFormatter formatter =
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             formatDateTime = now.format(formatter);
         }
 
@@ -338,15 +341,17 @@ public class Main {
                 "                                this percentage goes down. num: 0-100.  Default: 25");
         System.out.println("                                Higher value mean less tested moves will be accepted.");
         System.out.println("    -log                        Activity and debug info will be written to chess.log");
-        System.out.println("    -log=file                   Activity and debug info will be written to specified log file");
-        System.out.println("    -profwait=num               delay num seconds after startup to allow profiler to start");
+        System.out.println(
+                "    -log=file                   Activity and debug info will be written to specified log file");
+        System.out
+                .println("    -profwait=num               delay num seconds after startup to allow profiler to start");
         System.out.println("    -throttle=num               sleep num nanoseconds on each minmax test");
         System.out.println("    -refresh=num                update the display every num milliseconds");
         System.out.println("    -screenfile=file            write display output to file");
         System.out.println("    -test                       Run internal tests and exit");
         System.out.println("    -ply=num                    Sets the max number of look-ahead moves");
         System.out.println("    -maxtime=num                Limit AI thinking to num seconds");
-//        System.out.println("    -key=value                  ");
+        // System.out.println(" -key=value ");
     }
 
     private static void onAppExit() {
@@ -389,7 +394,7 @@ public class Main {
                     long waitTime = 3_000_000_000L;
                     long stopTime = System.nanoTime() + waitTime;
                     while (!liteAgent.moveSearchIsDone() && System.nanoTime() < stopTime) {
-                        yield();
+                        java.lang.Thread.yield();
                     }
                 }
 
@@ -414,14 +419,15 @@ public class Main {
 
     private static BiPredicate<List<String>, Map<String, String>> containsAny = (strList, optMap) -> {
         for (String key : strList) {
-            if (optMap.containsKey(key)) return true;
+            if (optMap.containsKey(key))
+                return true;
         }
         return false;
     };
 
-
-    //    private static final String[] charSetAscii = {"   "," p "," n "," b "," r "," q "," k "};
-    private static final String[] charSetUnicodeWhite = {"   ", " ♙ ", " ♞ ", " ♝ ", " ♜ ", " ♛ ", " ♚ "};
+    // private static final String[] charSetAscii = {" "," p "," n "," b "," r "," q
+    // "," k "};
+    private static final String[] charSetUnicodeWhite = { "   ", " ♙ ", " ♞ ", " ♝ ", " ♜ ", " ♛ ", " ♚ " };
 
     private static void writeToScreenFile(String output) {
         if (!options.containsKey("screenfile"))
@@ -439,7 +445,7 @@ public class Main {
 
     // output proxy for app for use with a LiteBoard and a LiteMinimax agent
     public static void showBoard(final LiteBoard board, final String moveDesc, final LiteMinimax agent, long moveStart,
-                          long gameStart, boolean searchDone) {
+            long gameStart, boolean searchDone) {
         // get the output formatted for this screen
         String output = showBoardImpl(board, moveDesc, agent, moveStart, gameStart, false, searchDone);
         System.out.print(output);
@@ -451,9 +457,8 @@ public class Main {
         }
     }
 
-
     private static String showBoardImpl(final LiteBoard board, final String moveDesc, final LiteMinimax agent,
-                                   long moveStart, long gameStart, boolean forFile, boolean searchDone) {
+            long moveStart, long gameStart, boolean forFile, boolean searchDone) {
 
         // The screen row to begin displaying on
         int topRow = 1;
@@ -512,7 +517,7 @@ public class Main {
         final String whtGivePath = Ansi.mergeColors24(victimsShade, whtBack, false);
 
         StringBuilder sb = new StringBuilder("    " + config.player2 + " taken:");
-        for (int ndx=0; ndx < board.numTaken1; ndx++) {
+        for (int ndx = 0; ndx < board.numTaken1; ndx++) {
             sb.append(whtForeB);
             int type = LiteUtil.getType(board.taken1[ndx]);
             if (type == LiteBoard.Pawn) {
@@ -523,7 +528,7 @@ public class Main {
         String takenMsg1 = sb.toString();
 
         sb = new StringBuilder("    " + config.player1 + " taken:");
-        for (int ndx=0; ndx < board.numTaken2; ndx++) {
+        for (int ndx = 0; ndx < board.numTaken2; ndx++) {
             sb.append(blkForeB);
             int type = LiteUtil.getType(board.taken2[ndx]);
             if (type == LiteBoard.Pawn) {
@@ -550,7 +555,7 @@ public class Main {
         if (moveStart != 0) {
             long timeSpent = (System.nanoTime() - moveStart) / 1_000_000_000L;
 
-            long numProcessed  = agent.getNumMovesExamined();
+            long numProcessed = agent.getNumMovesExamined();
 
             long numPerSec = (timeSpent == 0) ? numProcessed : (numProcessed / timeSpent);
 
@@ -595,13 +600,12 @@ public class Main {
                 writer.write(Ansi.clearEOL);
             }
         }
-//        writer.write("\n");
+        // writer.write("\n");
 
-
-//        if (board.kingInCheck(board.turn)) {
-//            writer.write((side == Side.Black) ? config.player2 : config.player1);
-//            writer.write(" is in check");
-//        }
+        // if (board.kingInCheck(board.turn)) {
+        // writer.write((side == Side.Black) ? config.player2 : config.player1);
+        // writer.write(" is in check");
+        // }
         if (!forFile) {
             writer.write(Ansi.clearEOL);
         }
@@ -621,14 +625,12 @@ public class Main {
             if (best != null) {
                 bestFromCol = best.getFromCol();
                 bestFromRow = best.getFromRow();
-                bestFromBack = ((bestFromCol + bestFromRow) % 2) == 0 ?
-                        Ansi.mergeColors24(bestFromBack, blkBack, false) :
-                        Ansi.mergeColors24(bestFromBack, whtBack, false);
+                bestFromBack = ((bestFromCol + bestFromRow) % 2) == 0 ? Ansi.mergeColors24(bestFromBack, blkBack, false)
+                        : Ansi.mergeColors24(bestFromBack, whtBack, false);
                 bestToCol = best.getToCol();
                 bestToRow = best.getToRow();
-                bestToBack = ((bestToCol + bestToRow) % 2) == 0 ?
-                        Ansi.mergeColors24(bestToBack, blkBack, false) :
-                        Ansi.mergeColors24(bestToBack, whtBack, false);
+                bestToBack = ((bestToCol + bestToRow) % 2) == 0 ? Ansi.mergeColors24(bestToBack, blkBack, false)
+                        : Ansi.mergeColors24(bestToBack, whtBack, false);
             }
         }
 
@@ -698,7 +700,7 @@ public class Main {
                 writer.write(fmtClrBack + fmtClrFore + fmtAttr + charSetUnicodeWhite[pieceType]);
             }
             writer.write(Ansi.resetAll);
-            String[] rowStrings = {boardScore, takenMsg0, takenMsg1, "", "", stat1, stat2, stat3};
+            String[] rowStrings = { boardScore, takenMsg0, takenMsg1, "", "", stat1, stat2, stat3 };
 
             writer.write(rowStrings[row] + "\r\n");
 
@@ -739,8 +741,7 @@ public class Main {
         if (board.turn == Side.Black) {
             numMoveBlack = board.numMoves1;
             numMoveWhite = board.numMoves2;
-        }
-        else {
+        } else {
             numMoveBlack = board.numMoves2;
             numMoveWhite = board.numMoves1;
         }
@@ -783,12 +784,12 @@ public class Main {
     private static Integer[] cfgClrStrToAnsi(final String cfgStr) {
         String[] parts = cfgStr.split(",");
         if (parts.length < 3) {
-            return new Integer[]{};
+            return new Integer[] {};
         } else {
-            return new Integer[]{
+            return new Integer[] {
                     Integer.valueOf(parts[0].trim()),
                     Integer.valueOf(parts[1].trim()),
-                    Integer.valueOf(parts[2].trim())};
+                    Integer.valueOf(parts[2].trim()) };
         }
     }
 
@@ -800,12 +801,12 @@ public class Main {
         int numMoves = (side == board.turn) ? board.numMoves1 : board.numMoves2;
         Move[] moves = (side == board.turn) ? board.moves1 : board.moves2;
 
-        for (int ndx=0; ndx < numMoves; ndx++) {
+        for (int ndx = 0; ndx < numMoves; ndx++) {
             Move move = moves[ndx];
             if (config.showCapturesOnly && move.getValue() == 0) {
                 continue;
             }
-            if (config.showCapturesOnly &&  board.isEmpty(move.getToCol() + move.getToRow() * 8)) {
+            if (config.showCapturesOnly && board.isEmpty(move.getToCol() + move.getToRow() * 8)) {
                 continue;
             }
 
@@ -853,7 +854,8 @@ public class Main {
     }
 
     private static String getMoveDesc(final LiteBoard board, final Move move, boolean forFile) {
-        if (move == null) return "";
+        if (move == null)
+            return "";
 
         StringBuilder sb = new StringBuilder();
 
@@ -861,13 +863,15 @@ public class Main {
         int to = board.board[move.getTo()];
         int fromType = LiteUtil.getType(from);
         String pieceName = getPieceName(fromType);
-        String suffix = LiteUtil.isEmpty(to) ? "" : " capturing "
-                + getPieceName(LiteUtil.getType(to));
+        String suffix = LiteUtil.isEmpty(to) ? ""
+                : " capturing "
+                        + getPieceName(LiteUtil.getType(to));
         if (fromType == LiteBoard.Pawn) {
             if ((board.turn == Side.Black && move.getToRow() == 7) ||
                     (board.turn == Side.White && move.getToRow() == 0)) {
-                    if (!suffix.isEmpty()) suffix += " and ";
-                    suffix += " is promoted to queen! ";
+                if (!suffix.isEmpty())
+                    suffix += " and ";
+                suffix += " is promoted to queen! ";
             }
             if (LiteUtil.isEmpty(to) && move.getFromCol() != move.getToCol()) {
                 suffix = " En passant capturing Pawn!";
@@ -900,7 +904,7 @@ public class Main {
     /**
      * A table of piece names
      */
-    private static final String[] typeNames = {"Empty", "Pawn", "Knight", "Bishop", "Rook", "Queen", "King"};
+    private static final String[] typeNames = { "Empty", "Pawn", "Knight", "Bishop", "Rook", "Queen", "King" };
 
     public static String getPieceName(int type) {
         return typeNames[(type & 0x7)];
@@ -922,7 +926,7 @@ public class Main {
     };
 
     public static String posString(int col, int row) {
-        return String.valueOf(new char[]{toPos(col), toPos(row + 8)});
+        return String.valueOf(new char[] { toPos(col), toPos(row + 8) });
     }
 
     private static Move getHumanMove(final LiteBoard board) {
@@ -954,7 +958,7 @@ public class Main {
             int row1 = 8 - Integer.parseInt(parts[0].substring(1));
             int row2 = 8 - Integer.parseInt(parts[1].substring(1));
 
-            for (int ndx=0; ndx < board.numMoves1; ndx++) {
+            for (int ndx = 0; ndx < board.numMoves1; ndx++) {
                 Move m = board.moves1[ndx];
                 if (m.getFromCol() == col1 && m.getFromRow() == row1
                         && m.getToCol() == col2 && m.getToRow() == row2) {
