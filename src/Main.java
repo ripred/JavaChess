@@ -15,8 +15,8 @@ import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
+//import sun.misc.Signal;
+// import sun.misc.SignalHandler;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,10 +46,15 @@ public class Main {
     public static void main(String[] args) throws InterruptedException, IllegalArgumentException {
         setLogLevel(LogLevel.DEBUG);
 
-        // our signal handler - handle SIGINT (e.g. user hit ctrl-c) etc
-        SignalHandler sigHandler = sig -> onAppExit();
-        // Register our signal handler for the interrupt signal (SIGINT)
-        Signal.handle(new Signal("INT"), sigHandler);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down gracefully...");
+            // Perform cleanup or any necessary actions before exiting
+        }));
+
+        // // our signal handler - handle SIGINT (e.g. user hit ctrl-c) etc
+        // SignalHandler sigHandler = sig -> onAppExit();
+        // // Register our signal handler for the interrupt signal (SIGINT)
+        // Signal.handle(new Signal("INT"), sigHandler);
 
         parseCmdline(args);
 
