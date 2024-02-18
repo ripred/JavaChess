@@ -189,7 +189,7 @@ public class LiteMinimax implements Serializable {
 
     /**
      * Register a String message consumer that can receive
-     * any asynchronous this object needs to send.
+     * any asynchronous messages this object needs to send.
      *
      * @param cb an instance of a functional object to send
      *           our messages to if needed.
