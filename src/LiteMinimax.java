@@ -1095,7 +1095,7 @@ public class LiteMinimax implements Serializable {
                 break;
             }
 
-            // If we are out of time then return the best outcome we've seen this move accomplish
+            // If we are out of time then return the best outcome we've seen this move and thread accomplish so far
             if (searchTimeLimit > 0 && System.nanoTime() >= searchTimeLimit) {
                 break;
             }
