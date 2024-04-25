@@ -60,8 +60,8 @@ $ java -jar chess.jar
 # blkCheck            foreground color for black king in check
 # whtCheck            foreground color for white king in check
 #
-# targetsShade        color influence for target positions
-# victimsShade        color influence for victim positions
+# targetsShade        color influence for target path positions
+# victimsShade        color influence for victim path positions
 #
 #
 #Wed Jul 03 01:13:30 CDT 2019
