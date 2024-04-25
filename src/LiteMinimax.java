@@ -154,7 +154,7 @@ public class LiteMinimax implements Serializable {
 
     /**
      * Get the number of moves examined so far by the last search that was started.
-     * If the search was launched in the background then repeated calls to
+     * If the search was launched in a background thread then repeated calls to
      * this method will return higher values indicating the progress of the
      * move examinations.
      *
