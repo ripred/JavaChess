@@ -24,6 +24,8 @@ $ java -jar chess.jar
 
 
 ```
+# chess.properties
+# configuration file for JavaChess
 #
 # Usage:
 #
