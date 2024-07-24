@@ -20,7 +20,7 @@ $ java -jar chess.jar
 ##### To end the program simply hit ctrl-c at any time.
 
 
-##### To play against the computer change the _humanPlayer_ value to true in the editable **chess.properties** file and re-run the jar file.  Or change any of the other options and re-run the jar file.  Play around!  Many interesting combinations are available there:
+##### To play against the computer change the _humanPlayer_ value to true in the editable `chess.properties` file and re-run the jar file.  Or change any of the other options and re-run the jar file.  Play around!  Many interesting combinations are available there:
 
 
 ```
