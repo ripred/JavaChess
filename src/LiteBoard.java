@@ -299,13 +299,15 @@ public class LiteBoard {
 
     public boolean checkDrawByRepetition(final Move move, final int maxRepetitions) {
         // Check for draw-by-repetition (same made too many times in a row by a player)
-        int need = (int) Math.pow(2.0, (maxRepetitions + 1));
+        int need = maxRepetitions * 2;
         if (numHist < need) return false;
         int count = 0;
-        for (int i = numHist - need; i < numHist; i++) {
+        for (int i = numHist - need; i < numHist; i += 2) {
             if (history[i].equals(move)) {
                 count++;
                 if (count >= maxRepetitions) return true;
+            } else {
+                return false;
             }
         }
         return false;
