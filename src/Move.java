@@ -57,14 +57,13 @@ public class Move implements Serializable {
             return false;
         }
         Move move = (Move) o;
-        return from  == move.from
-            && to    == move.to
-            && value == move.value;
+        return from == move.from
+            && to   == move.to;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(from, to, value);
+        return Objects.hash(from, to);
     }
 
     @Override
