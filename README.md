@@ -1,4 +1,9 @@
 # JavaChess
+[![GitHub tag](https://flat.badgen.net/github/tag/ripred/JavaChess)](https://github.com/ripred/JavaChess/tags)
+[![License](https://flat.badgen.net/github/license/ripred/JavaChess)](https://github.com/ripred/JavaChess/blob/master/LICENSE)
+[![Stars](https://flat.badgen.net/github/stars/ripred/JavaChess)](https://github.com/ripred/JavaChess/stargazers)
+[![Forks](https://flat.badgen.net/github/forks/ripred/JavaChess)](https://github.com/ripred/JavaChess/network/members)
+
 * 24-bit ANSI colored, console-based chess using Java.  
 * Either side can be human or a multi-threaded AI instance using the Minimax algorithm with alpha-beta pruning. 
 * Uses map/reduce and streaming techniques to speed up the parallelism using multiple cores during board valuations since those happen after every move millions of times on every thread. 
